@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>Apache Phoenix Server 提示 Header 过长（code 413）的解决办法 | 涛声依旧</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="Phoenix 4.4版本发布之后，Phoenix的Query Server也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。
+错误表现在通过JDBC的方式连接到Phoenix Query Server之后，有的查询可以正常执行，有的会直接抛错：
+1response code 413
+在Http的状态码中，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Apache Phoenix Server 提示 Header 过长（code 413）的解决办法">
+<meta property="og:url" content="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/index.html">
+<meta property="og:site_name" content="涛声依旧">
+<meta property="og:description" content="Phoenix 4.4版本发布之后，Phoenix的Query Server也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。
+错误表现在通过JDBC的方式连接到Phoenix Query Server之后，有的查询可以正常执行，有的会直接抛错：
+1response code 413
+在Http的状态码中，">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Apache Phoenix Server 提示 Header 过长（code 413）的解决办法">
+<meta name="twitter:description" content="Phoenix 4.4版本发布之后，Phoenix的Query Server也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。
+错误表现在通过JDBC的方式连接到Phoenix Query Server之后，有的查询可以正常执行，有的会直接抛错：
+1response code 413
+在Http的状态码中，">
+  
+    <link rel="alternative" href="/atom.xml" title="涛声依旧" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="/css/style.css" type="text/css">
+  
+
+</head>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">涛声依旧</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="q" value="site:https://dingguitao.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-fix_phoenix_server_error_413" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2015/05/26/fix_phoenix_server_error_413/" class="article-date">
+  <time datetime="2015-05-26T08:04:07.000Z" itemprop="datePublished">2015-05-26</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Apache Phoenix Server 提示 Header 过长（code 413）的解决办法
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>Phoenix 4.4版本发布之后，Phoenix的<a href="http://phoenix.apache.org/server.html" target="_blank" rel="external">Query Server</a>也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。</p>
+<h3 id="错误表现">错误表现</h3><p>在通过JDBC的方式连接到Phoenix Query Server之后，有的查询可以正常执行，有的会直接抛错：</p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">response <span class="tag">code</span> <span class="number">413</span></span><br></pre></td></tr></table></figure>
+<p>在Http的<a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html" target="_blank" rel="external">状态码</a>中，413代表的是请求提交的数据量太大，服务器关闭了连接：</p>
+<figure class="highlight livecodeserver"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">413</span> Request Entity Too Large</span><br><span class="line">The server is refusing <span class="built_in">to</span> <span class="built_in">process</span> <span class="operator">a</span> request because <span class="operator">the</span> request entity is larger than <span class="operator">the</span> server is willing <span class="operator">or</span> able <span class="built_in">to</span> <span class="built_in">process</span>. The server MAY <span class="built_in">close</span> <span class="operator">the</span> connection <span class="built_in">to</span> prevent <span class="operator">the</span> client <span class="built_in">from</span> continuing <span class="operator">the</span> request.</span><br><span class="line">If <span class="operator">the</span> condition is temporary, <span class="operator">the</span> server SHOULD <span class="built_in">include</span> <span class="operator">a</span> Retry- After header field <span class="built_in">to</span> indicate that <span class="keyword">it</span> is temporary <span class="operator">and</span> <span class="keyword">after</span> what <span class="built_in">time</span> <span class="operator">the</span> client MAY <span class="keyword">try</span> again.</span><br></pre></td></tr></table></figure>
+<h3 id="错误根源">错误根源</h3><p>知道了错误的原因，下面去找错误的“发源地”，查看Phoenix Server的log后发现了这个：</p>
+<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="number">2015</span>-<span class="number">05</span>-<span class="number">26</span> <span class="number">10</span>:<span class="number">07</span>:<span class="number">45</span>,<span class="number">703</span> WARN org.eclipse.jetty.http.<span class="string">HttpParser:</span> Header is too large &gt;<span class="number">8192</span></span><br><span class="line"><span class="number">2015</span>-<span class="number">05</span>-<span class="number">26</span> <span class="number">10</span>:<span class="number">07</span>:<span class="number">45</span>,<span class="number">704</span> WARN org.eclipse.jetty.http.<span class="string">HttpParser:</span> <span class="string">badMessage:</span> <span class="number">413</span> <span class="keyword">for</span> HttpChannelOverHttp@<span class="number">25</span>f0493&#123;r=<span class="number">2</span>,c=<span class="literal">false</span>,a=IDLE,uri=-&#125;</span><br><span class="line"><span class="number">2015</span>-<span class="number">05</span>-<span class="number">26</span> <span class="number">10</span>:<span class="number">07</span>:<span class="number">45</span>,<span class="number">704</span> WARN org.eclipse.jetty.http.<span class="string">HttpParser:</span> <span class="string">badMessage:</span> java.lang.<span class="string">IllegalStateException:</span> too much data after closed <span class="keyword">for</span> HttpChannelOverHttp@<span class="number">25</span>f0493&#123;r=<span class="number">2</span>,c=<span class="literal">true</span>,a=COMPLETED,uri=/&#125;</span><br></pre></td></tr></table></figure>
+<p>这个错是Jetty抛出来的，原来Phoenix的Query Server是基于<a href="https://github.com/apache/incubator-calcite/blob/master/doc/avatica.md" target="_blank" rel="external">Avatica</a>的，而Avatica又是基于Jetty Http Server的，Jetty的Http Server限制了Header的最大长度为8KB，如果打给Phoenix Server的SQL过长，请求的长度超过8KB，就会导致Jetty直接抛异常出来。</p>
+<h3 id="错误解决">错误解决</h3><p>知道了错误的根源，下面就开始着手解决这个问题，首先想到的是有没有地方可以直接配置Jetty Http Server的最大Header长度，搜索后发现在原生的Jetty Server中，可以配置requestHeaderSize这个属性来更改默认的配置，但是估计是因为第一版的原因，Phoenix并没有提供相关的配置方法。</p>
+<p>所以干脆暴力点，直接修改相关的类文件，发现在Phoenix 4.4版本中，Jetty相关的类文件是放在<code>phoenix-server-4.4.0-HBase-1.0-runnable.jar</code>这个jar包中的，然后4.4版本的Phoenix Server是依赖的9.2.7版本的Jetty Server，所以直接去github上的<a href="https://github.com/eclipse/jetty.project" target="_blank" rel="external">Jetty Project</a>下载到对应版本的<code>org.eclipse.jetty.server.HttpConfiguration.java</code>文件，修改一下默认的Header大小设置。</p>
+<p>修改前：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">int</span> <span class="number">_</span>requestHeaderSize=<span class="number">8</span>*<span class="number">1024</span>; <span class="comment">//默认8KB</span></span><br></pre></td></tr></table></figure>
+<p>修改后：</p>
+<figure class="highlight aspectj"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">int</span> _requestHeaderSize=<span class="number">1024</span>*<span class="number">1024</span>*<span class="number">1024</span>; <span class="comment">//这次应该够用了 = =</span></span><br></pre></td></tr></table></figure>
+<p>编译后直接替换掉相应的类文件，重新打包替换原来的jar包，重启Phoenix Server，搞定。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="cia5abixg0009mkzqjy4c5feg" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Jetty/">Jetty</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2015/05/15/apache_phoenix_query_hbase_using_sql/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Apache Phoenix: 使用SQL查询HBase</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Categories</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">2</span></li></ul>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li></ul>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/Avatica/" style="font-size: 10px;">Avatica</a><a href="/tags/HBase/" style="font-size: 10px;">HBase</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/Phoenix/" style="font-size: 20px;">Phoenix</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">2</span></li></ul>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recents</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2015/05/26/fix_phoenix_server_error_413/">Apache Phoenix Server 提示 Header 过长（code 413）的解决办法</a>
+          </li>
+        
+          <li>
+            <a href="/2015/05/15/apache_phoenix_query_hbase_using_sql/">Apache Phoenix: 使用SQL查询HBase</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2015 Ding Guitao<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css" type="text/css">
+  <script src="/fancybox/jquery.fancybox.pack.js" type="text/javascript"></script>
+
+
+<script src="/js/script.js" type="text/javascript"></script>
+
+  </div>
+</body>
+</html>
