@@ -90,11 +90,11 @@
         <p>一个互联网公司，随着业务的不断深入和细化，一般会在数据上对特征类数据的需求会越来越大：机器学习需要大量的对象特征数据来训练模型、半精准或精准化营销需要根据对象特征来进行用户分群、推荐系统需要知道对象特征数据才能完成匹配等等，这么强烈的需求给数据工程师提出了一个比较大的挑战。</p>
 <p>我现在的门特尔泉哥常说：现在是一个最好的时代，因为有那么多轮子可用。的确，“大数据”的火热让数据社区越来越热闹，这也使得一些规模不太大的数据团队可以借助开源的力量完成一些比较挑战的工作。本文（确切说是本人）不会讲任何关于“大数据”的任何内容，只是结合最近做的项目，记录一下使用Apache Hive、HBase和Phoenix这三剑客在特征工程上的实战经历。</p>
 <h2 id="关于“特征工程”">关于“特征工程”</h2><p>特征工程（Feature Engineering）是一个很宽泛的话题，一般大家都认为特征工程是机器学习的前奏，它的主要工作是根据场景计算和选择输入的x变量。当大多数的精力都放在炫酷的数学公式和模型的时候，人们往往会忽视特征工程的重要性，其实特征工程也包含很多内容：特征定义、特征加工、特征提取和特征选择等等，本文的内容会集中在离线环境下的特征加工和特征提取这两个方面。</p>
-<p><strong>特征加工（Feature Construction）：</strong>特征必须是依附在一个对象（Entity）身上的，一个对象身上会有多个特征，对象与对象之间相互独立。这里说的特征加工的范围是根据当前对象的可操作数据（ods）计算得到该对象的特征（feature），用数据人的语言（SQL）表示是这样的：</p>
+<p><strong>特征加工（Feature Construction）：</strong>特征必须是依附在一个对象（Entity）身上的，一个对象身上会有多个特征，对象之间和特征之间都是相互独立的。这里说的特征加工的范围是根据当前对象的可操作数据（ods）计算得到该对象的特征（feature），用数据人的语言（SQL）表示是这样的：</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator"><span class="keyword">select</span></span><br><span class="line">    <span class="keyword">coalesce</span>(f0001.entity_id, f0002.entity_id, ... , f1234.entiry_id) <span class="keyword">as</span> entity_id,</span><br><span class="line">    f0001.fea_0001,</span><br><span class="line">    f0002.fea_0002,</span><br><span class="line">    ... ,</span><br><span class="line">    f1234.fea_1234</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    (<span class="keyword">select</span></span><br><span class="line">        entity_id,</span><br><span class="line">        agg(<span class="keyword">value</span>) <span class="keyword">as</span> feature_0001</span><br><span class="line">    <span class="keyword">from</span></span><br><span class="line">        ods.table_0001</span><br><span class="line">    <span class="keyword">group</span> <span class="keyword">by</span></span><br><span class="line">        entiry_id</span><br><span class="line">    ) f0001</span><br><span class="line">    <span class="keyword">full</span> <span class="keyword">outer</span> <span class="keyword">join</span></span><br><span class="line">    (</span><br><span class="line">        ...</span><br><span class="line">    ) f0002</span><br><span class="line">    <span class="keyword">on</span> f0001.entity_id = f0002.entity_id</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">full</span> <span class="keyword">outer</span> <span class="keyword">join</span></span><br><span class="line">    (</span><br><span class="line">        ...</span><br><span class="line">    ) f1234</span><br><span class="line">    ...</span></span><br></pre></td></tr></table></figure>
-<p><strong>特征提取（Feature Extraction）：</strong>根据不同的场景，提取特征数据的过程大同小异，基本的规则是输出某些特征符合给定条件的所有对象的ID（entity_id）和兴趣特征值，用数据人的语言表示是这样的：</p>
+<p><strong>特征提取（Feature Extraction）：</strong>根据不同的场景，离线环境下特征数据的提取过程大同小异，基本的模式是输出某些特征符合给定条件的所有对象的ID（entity_id）和兴趣特征值，用数据人的语言表示是这样的：</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator"><span class="keyword">select</span></span><br><span class="line">    entity_id,</span><br><span class="line">    fea_0002,</span><br><span class="line">    fea_0520,</span><br><span class="line">    fea_1111</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    feature.<span class="keyword">table</span></span><br><span class="line"><span class="keyword">where</span></span><br><span class="line">    fea_0013 &gt; <span class="number">1.2</span> <span class="keyword">and</span></span><br><span class="line">    fea_0014 &lt; <span class="number">2.3</span> <span class="keyword">and</span></span><br><span class="line">    fea_0064 <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">null</span></span></span><br></pre></td></tr></table></figure>
-<p>值得注意的是，一种对象的特征可能有成千上万个，所以数据是相当稀疏（sparse）的，而且很多场景下筛选用到（where）的或者感兴趣提取（select）的特征可能只有三五个，这就需要保证整个提取引擎的水平扩展性要非常好，最后我们的系统设计基本如下图所示，还有耐心的童鞋看完图可以接着往下看：）</p>
+<p>值得注意的是，一种对象的特征可能有成千上万个，所以数据是相当稀疏（sparse）的，而且很多场景下筛选用到（where）的或者感兴趣提取（select）的特征可能只有很少的几个，这就需要保证整个提取引擎的水平扩展性要非常好，最后我们的系统设计基本如下图所示，有耐心的童鞋看完图可以接着往下看：）</p>
 <p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/feature_engineering_architecture.png" alt="Feature Engineering Architecture"></p>
 <h2 id="使用Hive进行单个特征的加工">使用Hive进行单个特征的加工</h2><p>单个特征的加工本质上是一个基于entity_id的聚合过程，在我们的项目中，它的输入数据是原始或者经过清洗的日志数据，输出则是每个entity_id对应的特征值。如果整个数据仓库的环境是基于HDFS的，那么MapReduce非常适合做这个工作，别忘了，著名的MapReduce入门程序WordCount就是这样一个聚合的过程。</p>
 <p><a href="http://hive.apache.org/" target="_blank" rel="external">Apache Hive</a>作为一个SQL on hadoop的工具，已经成为越来越多人做数据仓库的选择。Hive可以把Hive SQL翻译成MapReduce程序来查询HDFS上的数据，这让我们的开发过程会更加高效。比如说我们现在要从原始的流量数据（hive表名：ods.traffic）中加工出一个<em>最近七日用户PV总和（tag名：pv_last_7d_sum）</em>的特征，可以这么做：</p>
@@ -112,7 +112,7 @@
 <li>查询的复杂度最好只跟查询时用到的特征的数量有关，而与存储的特征的总数无关。</li>
 <li>因为要提供对外的数据服务，查询的延迟（latency）要尽量低。</li>
 </ul>
-<p>熟悉<a href="https://hbase.apache.org/" target="_blank" rel="external">Apache HBase</a>的同学发现，HBase天然适合做这件事，建立一张有一个或多个列族的特征大表，entity_id作为row_key，每个特征作为一个列族的一个列，这样特征的关联就是一个简单的UPSERT操作，每增加一个特征就增加一次UPSERT，HBase本身的查询延迟就非常低，它的<a href="http://0b4af6cdc2f0c5998459-c0245c5c937c5dedcca3f1764ecc9b2f.r43.cf2.rackcdn.com/9353-login1210_khurana.pdf" target="_blank" rel="external">数据模型</a>也保证了查询的复杂度跟表的列数没有关系：</p>
+<p>熟悉<a href="https://hbase.apache.org/" target="_blank" rel="external">Apache HBase</a>的同学发现，HBase天然适合做这件事，建立一张有一个或多个列族的特征大表，entity_id作为row_key，每个特征作为一个列族的一个列，这样特征的关联就是简单的UPSERT操作，HBase本身的查询延迟就非常低，它的<a href="http://0b4af6cdc2f0c5998459-c0245c5c937c5dedcca3f1764ecc9b2f.r43.cf2.rackcdn.com/9353-login1210_khurana.pdf" target="_blank" rel="external">数据模型</a>也保证了查询的复杂度跟表的列数没有关系：</p>
 <blockquote>
 <p>You can view the same thing as if it’s a key-value store, where the key is the row key and the value is the rest of the data in a column . Given that the row key is the only way to address a row, that seems befitting . You can also consider HBase to be a key-value store where the key is defined as row key, column family, column qualifier, timestamp, and the value is the actual data stored in the cell .</p>
 </blockquote>
@@ -126,7 +126,8 @@
 <li>列的数据类型全部都是string类型，其它类型的数据会在写入HBase之前转化为string类型。</li>
 <li>每个版本的Hive自带的hive-hbase-handler都针对一个特定版本的HBase，例如1.2.0版本Hive对应的HBase版本是0.98.5，如果实际生产环境中用到了不同版本的HBase，则需要手动编译打包一下hive-hbase-handler.jar文件。</li>
 </ul>
-<h2 id="使用Phoenix提供特征提取的接口">使用Phoenix提供特征提取的接口</h2><p>到这里，我们已经完成了特征加工的工作，接下来是特征的提取，如前面提到的，现有场景下的特征提取过程实际是一个全表扫描的过程，而HBase是为随机读的场景设计的，一个SCAN的执行实际上是对region file的顺序扫描，所以我们如果想要提高全表扫描的效率，首先得实现HBase的并行查询，而<a href="http://phoenix.apache.org/" target="_blank" rel="external">Apache Phoenix</a>很好地解决了这个问题。<br>我之前的一篇文章已经对Phoenix做了一些简单的介绍，简单来讲Phoenix允许我们使用SQL查询HBase中的数据，使得我们的开发量大大降低，并且提供了很多额外的特性让HBase的全表扫描变得更加高效：</p>
+<h2 id="使用Phoenix提供特征提取的接口">使用Phoenix提供特征提取的接口</h2><p>到这里，我们已经完成了特征加工的工作，接下来是特征的提取，如前面提到的，现有场景下的特征提取过程实际是一个全表扫描的过程，而HBase是为随机读的场景设计的，一个SCAN的执行实际上是对region file的顺序扫描，所以我们如果想要提高全表扫描的效率，首先得实现HBase的并行查询，而<a href="http://phoenix.apache.org/" target="_blank" rel="external">Apache Phoenix</a>很好地解决了这个问题。</p>
+<p>我之前的一篇文章已经对Phoenix做了一些简单的介绍，简单来讲Phoenix允许我们使用SQL查询HBase中的数据，使得我们的开发量大大降低，并且提供了很多额外的特性让HBase的全表扫描变得更加高效：</p>
 <ul>
 <li>通过coprocessors实现并行扫描。</li>
 <li>对row_key加盐，避免hotspotting。</li>
@@ -137,15 +138,16 @@
 <p>再建一张Phoenix的特征大表主要是因为Phoenix的View还不够稳定，另外这样也有几个好处：</p>
 <ul>
 <li>可以实现读写分离，避免行级事务带来的一些问题。</li>
-<li>可以更方便地想用Phoenix的二级索引、加盐等特性。</li>
+<li>可以更方便地想用Phoenix的二级索引、row_key加盐等特性。</li>
 <li>数据查询的效率比用View要高，测试下来，对~4KW行 x ~100列的数据表（总数据量在100G左右），在使用自定义函数完成很复杂运算的条件下，也能在1min左右给出查询结果。</li>
 </ul>
-<p>在这样的系统设计下，增加一个特征需要做的只是写几句HiveQL的脚本和调整Phoenix特征大表的表结构，可扩展性还是比较OK的。以上就是本人使用Apache三剑客进行特征工程的实战经历，值得高兴的是这三剑客还在不断更新，相信它们会更强大更稳定。其实在整个过程中我也遇到了不少的坑，尤其是Phoenix和HBase的配置和优化，还好社区里的小伙伴们都很热心，所以整体的体验还是很愉快的，也希望写的这些能对大家的工作有所帮助。Happy Dataing!</p>
+<p>在这样的系统设计下，增加一个特征需要做的只是写几句HiveQL和调整Phoenix特征大表的表结构，可扩展性还是比较OK的。</p>
+<p>以上就是本人使用Apache三剑客进行特征工程的实战经历，值得高兴的是这三剑客还在不断更新，相信它们会更强大更稳定。其实在整个过程中我也遇到了不少的坑，尤其是Phoenix和HBase的配置和优化，还好社区里的小伙伴们都很热心，所以整体的体验还是很愉快的，也希望写的这些能对大家的工作有所帮助。Happy Dataing!</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/" data-id="ciaon4vat0000pwzqv3lnr0yd" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/" data-id="ciaop540x0000u4zq27khunfw" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hive/">Hive</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -205,7 +207,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="ciaon4vcf000mpwzqepdnxkkb" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="ciaop542h000mu4zqrr9xgz7z" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Encoding/">Encoding</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -262,7 +264,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="ciaon4vca000fpwzquss165l5" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="ciaop542c000fu4zq05trzmit" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Jetty/">Jetty</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -354,7 +356,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/15/apache_phoenix_query_hbase_using_sql/" data-id="ciaon4vck000spwzq2z0dxt7a" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/15/apache_phoenix_query_hbase_using_sql/" data-id="ciaop542m000su4zqyp1gvbwf" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a></li></ul>
@@ -403,7 +405,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2013/01/25/Kiong-Sing/" data-id="ciaon4vcr000ypwzqyv8zgyld" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2013/01/25/Kiong-Sing/" data-id="ciaop542v000yu4zqqn51eo21" class="article-share-link">Share</a>
       
       
     </footer>
@@ -447,7 +449,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2012/12/25/Kiong-About/" data-id="ciaon4vcu0011pwzqwjktuwyu" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2012/12/25/Kiong-About/" data-id="ciaop542x0011u4zqdmfyz2v9" class="article-share-link">Share</a>
       
       
     </footer>
