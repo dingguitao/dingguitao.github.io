@@ -61,6 +61,102 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/" class="article-date">
+  <time datetime="2015-06-07T04:23:17.000Z" itemprop="datePublished">2015-06-07</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/">从ODS到FEATURE：Apache Hive、HBase、Phoenix三剑客之离线特征工程实战</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>一个互联网公司，随着业务的不断深入和细化，一般会在数据上对特征类数据的需求会越来越大：机器学习需要大量的对象特征数据来训练模型、半精准或精准化营销需要根据对象特征来进行用户分群、推荐系统需要知道对象特征数据才能完成匹配等等，这么强烈的需求给数据工程师提出了一个比较大的挑战。</p>
+<p>我现在的门特尔泉哥常说：现在是一个最好的时代，因为有那么多轮子可用。的确，“大数据”的火热让数据社区越来越热闹，这也使得一些规模不太大的数据团队可以借助开源的力量完成一些比较挑战的工作。本文（确切说是本人）不会讲任何关于“大数据”的任何内容，只是结合最近做的项目，记录一下使用Apache Hive、HBase和Phoenix这三剑客在特征工程上的实战经历。</p>
+<h2 id="关于“特征工程”">关于“特征工程”</h2><p>特征工程（Feature Engineering）是一个很宽泛的话题，一般大家都认为特征工程是机器学习的前奏，它的主要工作是根据场景计算和选择输入的x变量。当大多数的精力都放在炫酷的数学公式和模型的时候，人们往往会忽视特征工程的重要性，其实特征工程也包含很多内容：特征定义、特征加工、特征提取和特征选择等等，本文的内容会集中在离线环境下的特征加工和特征提取这两个方面。</p>
+<p><strong>特征加工（Feature Construction）：</strong>特征必须是依附在一个对象（Entity）身上的，一个对象身上会有多个特征，对象与对象之间相互独立。这里说的特征加工的范围是根据当前对象的可操作数据（ods）计算得到该对象的特征（feature），用数据人的语言（SQL）表示是这样的：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator"><span class="keyword">select</span></span><br><span class="line">    <span class="keyword">coalesce</span>(f0001.entity_id, f0002.entity_id, ... , f1234.entiry_id) <span class="keyword">as</span> entity_id,</span><br><span class="line">    f0001.fea_0001,</span><br><span class="line">    f0002.fea_0002,</span><br><span class="line">    ... ,</span><br><span class="line">    f1234.fea_1234</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    (<span class="keyword">select</span></span><br><span class="line">        entity_id,</span><br><span class="line">        agg(<span class="keyword">value</span>) <span class="keyword">as</span> feature_0001</span><br><span class="line">    <span class="keyword">from</span></span><br><span class="line">        ods.table_0001</span><br><span class="line">    <span class="keyword">group</span> <span class="keyword">by</span></span><br><span class="line">        entiry_id</span><br><span class="line">    ) f0001</span><br><span class="line">    <span class="keyword">full</span> <span class="keyword">outer</span> <span class="keyword">join</span></span><br><span class="line">    (</span><br><span class="line">        ...</span><br><span class="line">    ) f0002</span><br><span class="line">    <span class="keyword">on</span> f0001.entity_id = f0002.entity_id</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">full</span> <span class="keyword">outer</span> <span class="keyword">join</span></span><br><span class="line">    (</span><br><span class="line">        ...</span><br><span class="line">    ) f1234</span><br><span class="line">    ...</span></span><br></pre></td></tr></table></figure>
+<p><strong>特征提取（Feature Extraction）：</strong>根据不同的场景，提取特征数据的过程大同小异，基本的规则是输出某些特征符合给定条件的所有对象的ID（entity_id）和兴趣特征值，用数据人的语言表示是这样的：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator"><span class="keyword">select</span></span><br><span class="line">    entity_id,</span><br><span class="line">    fea_0002,</span><br><span class="line">    fea_0520,</span><br><span class="line">    fea_1111</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    feature.<span class="keyword">table</span></span><br><span class="line"><span class="keyword">where</span></span><br><span class="line">    fea_0013 &gt; <span class="number">1.2</span> <span class="keyword">and</span></span><br><span class="line">    fea_0014 &lt; <span class="number">2.3</span> <span class="keyword">and</span></span><br><span class="line">    fea_0064 <span class="keyword">is</span> <span class="keyword">not</span> <span class="literal">null</span></span></span><br></pre></td></tr></table></figure>
+<p>值得注意的是，一种对象的特征可能有成千上万个，所以数据是相当稀疏（sparse）的，而且很多场景下筛选用到（where）的或者感兴趣提取（select）的特征可能只有三五个，这就需要保证整个提取引擎的水平扩展性要非常好，最后我们的系统设计基本如下图所示，还有耐心的童鞋看完图可以接着往下看：）</p>
+<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/feature_engineering_architecture.png" alt="Feature Engineering Architecture"></p>
+<h2 id="使用Hive进行单个特征的加工">使用Hive进行单个特征的加工</h2><p>单个特征的加工本质上是一个基于entity_id的聚合过程，在我们的项目中，它的输入数据是原始或者经过清洗的日志数据，输出则是每个entity_id对应的特征值。如果整个数据仓库的环境是基于HDFS的，那么MapReduce非常适合做这个工作，别忘了，著名的MapReduce入门程序WordCount就是这样一个聚合的过程。</p>
+<p><a href="http://hive.apache.org/" target="_blank" rel="external">Apache Hive</a>作为一个SQL on hadoop的工具，已经成为越来越多人做数据仓库的选择。Hive可以把Hive SQL翻译成MapReduce程序来查询HDFS上的数据，这让我们的开发过程会更加高效。比如说我们现在要从原始的流量数据（hive表名：ods.traffic）中加工出一个<em>最近七日用户PV总和（tag名：pv_last_7d_sum）</em>的特征，可以这么做：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 预聚合数据（这张表可以使用dt作为partition，然后每日增量更新即可）</span></span><br><span class="line"><span class="operator"><span class="keyword">create</span> <span class="keyword">table</span> user_pv_by_day <span class="keyword">as</span></span><br><span class="line"><span class="keyword">select</span></span><br><span class="line">    dt,</span><br><span class="line">    user_id,</span><br><span class="line">    <span class="keyword">count</span>(<span class="number">1</span>) pv</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    ods.traffic</span><br><span class="line"><span class="keyword">where</span></span><br><span class="line">    dt <span class="keyword">between</span> <span class="string">'start_dt'</span> <span class="keyword">and</span> <span class="string">'end_dt'</span></span><br><span class="line"><span class="keyword">group</span> <span class="keyword">by</span></span><br><span class="line">    dt,</span><br><span class="line">    user_id;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 特征数据</span></span><br><span class="line"><span class="operator"><span class="keyword">create</span> <span class="keyword">table</span> user_pv_last_7d_sum <span class="keyword">as</span></span><br><span class="line"><span class="keyword">select</span></span><br><span class="line">    user_id,</span><br><span class="line">    <span class="keyword">sum</span>(pv) <span class="keyword">as</span> user_pv_last_7d_sum</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    user_pv_by_day</span><br><span class="line"><span class="keyword">where</span></span><br><span class="line">    dt <span class="keyword">between</span> <span class="string">'start_dt'</span> <span class="keyword">and</span> <span class="string">'end_dt'</span></span><br><span class="line"><span class="keyword">group</span> <span class="keyword">by</span></span><br><span class="line">    user_id;</span></span><br></pre></td></tr></table></figure>
+<h2 id="使用HBase将所有特征关联">使用HBase将所有特征关联</h2><p>单个的特征加工完成之后，我们得到了很多的特征小表（每个特征对应一张），下面就需要根据特征所属的entity_id把同一个对象的所有特征关联起来，得到一张特征的“大表”。如果继续使用Hive，那么这就是一个full join的工作，join的表的数量跟特征的数量相同，因为独立特征数可能会达到几千甚至几万，显然MapReduce或者现阶段的Hive已经不适合做这个工作了。</p>
+<p>回到我们得到的特征小表的结构：</p>
+<ul>
+<li>每张小表只有两列：entity_id和一个特征。</li>
+<li>每张小表中entity_id都是唯一的，可以当做Primary Key。</li>
+<li>数据是稀疏的，大多数的entity_id都是只有部分特征有值。</li>
+</ul>
+<p>再思考一下特征大表的使用场景：</p>
+<ul>
+<li>特征可能随时增加或删减，这要求大表的结构要有足够的灵活性。</li>
+<li>查询的复杂度最好只跟查询时用到的特征的数量有关，而与存储的特征的总数无关。</li>
+<li>因为要提供对外的数据服务，查询的延迟（latency）要尽量低。</li>
+</ul>
+<p>熟悉<a href="https://hbase.apache.org/" target="_blank" rel="external">Apache HBase</a>的同学发现，HBase天然适合做这件事，建立一张有一个或多个列族的特征大表，entity_id作为row_key，每个特征作为一个列族的一个列，这样特征的关联就是一个简单的UPSERT操作，每增加一个特征就增加一次UPSERT，HBase本身的查询延迟就非常低，它的<a href="http://0b4af6cdc2f0c5998459-c0245c5c937c5dedcca3f1764ecc9b2f.r43.cf2.rackcdn.com/9353-login1210_khurana.pdf" target="_blank" rel="external">数据模型</a>也保证了查询的复杂度跟表的列数没有关系：</p>
+<blockquote>
+<p>You can view the same thing as if it’s a key-value store, where the key is the row key and the value is the rest of the data in a column . Given that the row key is the only way to address a row, that seems befitting . You can also consider HBase to be a key-value store where the key is defined as row key, column family, column qualifier, timestamp, and the value is the actual data stored in the cell .</p>
+</blockquote>
+<p>因为之前的特征小表是在Hive中生成的，所以需要通过<a href="https://cwiki.apache.org/confluence/display/Hive/HBaseIntegration" target="_blank" rel="external">hive-hbase-handler</a>将Hive中的数据写入HBase。比如说我们现在有了两个特征：<em>最近七日用户PV总和（特征名：pv_last_7d_sum）</em>和<em>用户注册日期（特征名：reg_dt）</em>，可以这么做：</p>
+<p>首先需要在HBase建好大表：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator"><span class="keyword">create</span> <span class="string">'FEATURE'</span>, &#123;NAME =&gt; <span class="string">'0'</span>, VERSIONS =&gt; <span class="number">1</span>&#125;</span></span><br></pre></td></tr></table></figure>
+<p>然后将Hive中的数据写入HBase大表中：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 特征1：pv_last_7d_sum</span></span><br><span class="line"><span class="operator"><span class="keyword">drop</span> <span class="keyword">table</span> <span class="keyword">if</span> <span class="keyword">exists</span> user_pv_last_7d_sum_temp;</span></span><br><span class="line"><span class="operator"><span class="keyword">create</span> <span class="keyword">external</span> <span class="keyword">table</span> user_pv_last_7d_sum_temp (</span><br><span class="line">    user_id <span class="keyword">STRING</span>,</span><br><span class="line">    pv_last_7d_sum <span class="keyword">STRING</span></span><br><span class="line">)</span><br><span class="line">stored <span class="keyword">by</span> <span class="string">'org.apache.hadoop.hive.hbase.HBaseStorageHandler'</span></span><br><span class="line"><span class="keyword">with</span> serdeproperties (<span class="string">'hbase.columns.mapping'</span> = <span class="string">':key, 0:PV_LAST_7D_SUM'</span>)</span><br><span class="line">tblproperties (<span class="string">'hbase.table.name'</span> = <span class="string">'FEATURE'</span>);</span></span><br><span class="line"></span><br><span class="line"><span class="operator"><span class="keyword">insert</span> overwrite <span class="keyword">table</span> user_pv_last_7d_sum_temp</span><br><span class="line"><span class="keyword">select</span></span><br><span class="line">    user_id,</span><br><span class="line">    pv_last_7d_sum</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    user_pv_last_7d_sum;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 特征2： reg_dt</span></span><br><span class="line"><span class="operator"><span class="keyword">drop</span> <span class="keyword">table</span> <span class="keyword">if</span> <span class="keyword">exists</span> user_reg_dt_temp;</span></span><br><span class="line"><span class="operator"><span class="keyword">create</span> <span class="keyword">external</span> <span class="keyword">table</span> user_reg_dt_temp (</span><br><span class="line">    user_id <span class="keyword">STRING</span>,</span><br><span class="line">    reg_dt <span class="keyword">STRING</span></span><br><span class="line">)</span><br><span class="line">stored <span class="keyword">by</span> <span class="string">'org.apache.hadoop.hive.hbase.HBaseStorageHandler'</span></span><br><span class="line"><span class="keyword">with</span> serdeproperties (<span class="string">'hbase.columns.mapping'</span> = <span class="string">':key, 0:REG_DT'</span>)</span><br><span class="line">tblproperties (<span class="string">'hbase.table.name'</span> = <span class="string">'FEATURE'</span>);</span></span><br><span class="line"></span><br><span class="line"><span class="operator"><span class="keyword">insert</span> overwrite <span class="keyword">table</span> user_reg_dt_temp</span><br><span class="line"><span class="keyword">select</span></span><br><span class="line">    user_id,</span><br><span class="line">    reg_dt</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    user_reg_dt;</span></span><br></pre></td></tr></table></figure>
+<p>使用hive-hbase-handler的时候需要注意两点：</p>
+<ul>
+<li>列的数据类型全部都是string类型，其它类型的数据会在写入HBase之前转化为string类型。</li>
+<li>每个版本的Hive自带的hive-hbase-handler都针对一个特定版本的HBase，例如1.2.0版本Hive对应的HBase版本是0.98.5，如果实际生产环境中用到了不同版本的HBase，则需要手动编译打包一下hive-hbase-handler.jar文件。</li>
+</ul>
+<h2 id="使用Phoenix提供特征提取的接口">使用Phoenix提供特征提取的接口</h2><p>到这里，我们已经完成了特征加工的工作，接下来是特征的提取，如前面提到的，现有场景下的特征提取过程实际是一个全表扫描的过程，而HBase是为随机读的场景设计的，一个SCAN的执行实际上是对region file的顺序扫描，所以我们如果想要提高全表扫描的效率，首先得实现HBase的并行查询，而<a href="http://phoenix.apache.org/" target="_blank" rel="external">Apache Phoenix</a>很好地解决了这个问题。<br>我之前的一篇文章已经对Phoenix做了一些简单的介绍，简单来讲Phoenix允许我们使用SQL查询HBase中的数据，使得我们的开发量大大降低，并且提供了很多额外的特性让HBase的全表扫描变得更加高效：</p>
+<ul>
+<li>通过coprocessors实现并行扫描。</li>
+<li>对row_key加盐，避免hotspotting。</li>
+<li>可以对非row_key列建立二级索引。</li>
+</ul>
+<p>另外，Phoenix还允许我们添加自定义函数，使得数据的存取更加灵活。4.4版本之后，Phoenix发行了自己的Query Server，用户可以直接通过JDBC的方式连接到Query Server上查询数据，为数据提取接口的开发提供了很多的方便。Phoenix与HBase之间的连接也非常简单，以我们之前建的特征大表为例，我们可以按照下面的步骤在Phoenix中建表，就可以直接写SQL查询特征数据了。</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 1. 创建Phoenix View，完成与HBase特征大表的mapping</span></span><br><span class="line"><span class="operator"><span class="keyword">drop</span> <span class="keyword">view</span> <span class="keyword">if</span> <span class="keyword">exists</span> feature;</span></span><br><span class="line"><span class="operator"><span class="keyword">create</span> <span class="keyword">view</span> feature (</span><br><span class="line">    user_id <span class="built_in">varchar</span> <span class="keyword">primary</span> <span class="keyword">key</span>,</span><br><span class="line">    <span class="string">"0"</span>.pv_last_7d_sum <span class="built_in">varchar</span>,</span><br><span class="line">    <span class="string">"0"</span>.reg_dt <span class="built_in">varchar</span></span><br><span class="line">);</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 2. 将特征数据复制到新的Phoenix Table</span></span><br><span class="line"><span class="operator"><span class="keyword">drop</span> <span class="keyword">table</span> <span class="keyword">if</span> <span class="keyword">exists</span> feature_final;</span></span><br><span class="line"><span class="operator"><span class="keyword">create</span> <span class="keyword">table</span> feature_final (</span><br><span class="line">    user_id <span class="built_in">varchar</span> <span class="keyword">primary</span> <span class="keyword">key</span>,</span><br><span class="line">    pv_last_7d_sum <span class="built_in">decimal</span>,</span><br><span class="line">    reg_dt <span class="built_in">varchar</span></span><br><span class="line">) SALT_BUCKETS=<span class="number">10</span>;</span></span><br><span class="line"></span><br><span class="line">upsert into</span><br><span class="line">    feature_final</span><br><span class="line"><span class="operator"><span class="keyword">select</span></span><br><span class="line">    user_id,</span><br><span class="line">    to_number(pv_last_7d_sum),</span><br><span class="line">    reg_dt</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    feature_final;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 3.查询最近七天PV总和大于100的用户的ID和注册日期</span></span><br><span class="line"><span class="operator"><span class="keyword">select</span></span><br><span class="line">    user_id,</span><br><span class="line">    reg_dt</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    feature_final</span><br><span class="line"><span class="keyword">where</span></span><br><span class="line">    pv_last_7d &gt; <span class="number">100</span>;</span></span><br></pre></td></tr></table></figure>
+<p>再建一张Phoenix的特征大表主要是因为Phoenix的View还不够稳定，另外这样也有几个好处：</p>
+<ul>
+<li>可以实现读写分离，避免行级事务带来的一些问题。</li>
+<li>可以更方便地想用Phoenix的二级索引、加盐等特性。</li>
+<li>数据查询的效率比用View要高，测试下来，对~4KW行 x ~100列的数据表（总数据量在100G左右），在使用自定义函数完成很复杂运算的条件下，也能在1min左右给出查询结果。</li>
+</ul>
+<p>在这样的系统设计下，增加一个特征需要做的只是写几句HiveQL的脚本和调整Phoenix特征大表的表结构，可扩展性还是比较OK的。以上就是本人使用Apache三剑客进行特征工程的实战经历，值得高兴的是这三剑客还在不断更新，相信它们会更强大更稳定。其实在整个过程中我也遇到了不少的坑，尤其是Phoenix和HBase的配置和优化，还好社区里的小伙伴们都很热心，所以整体的体验还是很愉快的，也希望写的这些能对大家的工作有所帮助。Happy Dataing!</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://dingguitao.github.io/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/" data-id="ciaon4vat0000pwzqv3lnr0yd" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hive/">Hive</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+  
     <article id="post-change-phoenix-server-request-encoding-to-utf8" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" class="article-date">
@@ -109,7 +205,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="ciafcid6b000etpzqfh0vvicc" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="ciaon4vcf000mpwzqepdnxkkb" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Encoding/">Encoding</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -166,7 +262,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="ciafcid640005tpzqjikx97ss" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="ciaon4vca000fpwzquss165l5" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Jetty/">Jetty</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -258,7 +354,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/15/apache_phoenix_query_hbase_using_sql/" data-id="ciafcid6e000ktpzqbyi5s8wd" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/15/apache_phoenix_query_hbase_using_sql/" data-id="ciaon4vck000spwzq2z0dxt7a" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a></li></ul>
@@ -270,9 +366,56 @@
 
 
   
-    <article id="post-about-Kiong" class="article article-type-post" itemscope itemprop="blogPost">
+    <article id="post-Kiong-Sing" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2012/12/25/about-Kiong/" class="article-date">
+    <a href="/2013/01/25/Kiong-Sing/" class="article-date">
+  <time datetime="2013-01-25T13:06:28.000Z" itemprop="datePublished">2013-01-25</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/Kiong/">Kiong</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2013/01/25/Kiong-Sing/">唱歌跑调</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>Kiong不太会唱歌，确切地讲是不会唱歌，因为无论唱什么歌，她都能够巧妙地避开每一个正确的调，以至于后来当我们意见不统一的时候：</p>
+<p>Kiong：你听不听我的？！</p>
+<p>Me：不听！</p>
+<p>Kiong：你确定？</p>
+<p>Me：确定肯定以及一定！</p>
+<p>Kiong：那我要唱歌给你听了！</p>
+<p>Me（感受到了比东北话里的“你瞅啥”更强烈的生命安全威胁）：。。。且慢！仔细想想你说的好有道理 … …</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://dingguitao.github.io/2013/01/25/Kiong-Sing/" data-id="ciaon4vcr000ypwzqyv8zgyld" class="article-share-link">Share</a>
+      
+      
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-Kiong-About" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2012/12/25/Kiong-About/" class="article-date">
   <time datetime="2012-12-25T14:22:22.000Z" itemprop="datePublished">2012-12-25</time>
 </a>
     
@@ -288,7 +431,7 @@
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2012/12/25/about-Kiong/">关于Kiong</a>
+      <a class="article-title" href="/2012/12/25/Kiong-About/">关于Kiong</a>
     </h1>
   
 
@@ -299,16 +442,14 @@
         <p>Kiong是一个人，她之前是我的学妹，现在是我女朋友，将来是我媳妇（嘿嘿嘿嘿，喊我禽兽有什么用，有本事过来打我呀）。</p>
 <p>Kiong（二声）这个词来源于闽南话中“琼”的发音，Kiong的家人就是这么喊她的，后来我把新华字典翻了一遍也没有找到对应的读音和汉字，于是“Kiong”就变成了她的英文名。</p>
 <p>从我认识Kiong的第一天开始，每次见到她，她总是蹦蹦跳跳有说有笑的，有她在的地方，大家也都是轻松愉快的，她的世界里好像没有烦恼二字。当我真正走进她的世界，生活中就突然多出了好多好玩的事情，于是“Kiong”就变成了一种生活态度。</p>
-<p>所以我在博客中建立了“Kiong”这个分类，决定把生活中有趣的事情都记录下来。</p>
+<p>所以我在博客中建立了“Kiong”这个分类，记录关于Kiong的一切。</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2012/12/25/about-Kiong/" data-id="ciafcid500000tpzq6mwceqbr" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2012/12/25/Kiong-About/" data-id="ciaon4vcu0011pwzqwjktuwyu" class="article-share-link">Share</a>
       
       
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Kiong/">Kiong</a></li></ul>
-
     </footer>
   </div>
   
@@ -325,7 +466,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">3</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kiong/">Kiong</a><span class="category-list-count">1</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kiong/">Kiong</a><span class="category-list-count">2</span></li></ul>
     </div>
   </div>
 
@@ -334,7 +475,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Encoding/">Encoding</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Kiong/">Kiong</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Encoding/">Encoding</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Hive/">Hive</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -343,7 +484,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/Avatica/" style="font-size: 15px;">Avatica</a><a href="/tags/Encoding/" style="font-size: 10px;">Encoding</a><a href="/tags/HBase/" style="font-size: 10px;">HBase</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/Kiong/" style="font-size: 10px;">Kiong</a><a href="/tags/Phoenix/" style="font-size: 20px;">Phoenix</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a>
+      <a href="/tags/Avatica/" style="font-size: 15px;">Avatica</a><a href="/tags/Encoding/" style="font-size: 10px;">Encoding</a><a href="/tags/Feature-Construction/" style="font-size: 10px;">Feature Construction</a><a href="/tags/Feature-Engineering/" style="font-size: 10px;">Feature Engineering</a><a href="/tags/Feature-Extraction/" style="font-size: 10px;">Feature Extraction</a><a href="/tags/HBase/" style="font-size: 15px;">HBase</a><a href="/tags/Hive/" style="font-size: 10px;">Hive</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/Phoenix/" style="font-size: 20px;">Phoenix</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a>
     </div>
   </div>
 
@@ -352,7 +493,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2012/12/">十二月 2012</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/06/">六月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/01/">一月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2012/12/">十二月 2012</a><span class="archive-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -362,6 +503,10 @@
     <h3 class="widget-title">Recents</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/">从ODS到FEATURE：Apache Hive、HBase、Phoenix三剑客之离线特征工程实战</a>
+          </li>
         
           <li>
             <a href="/2015/05/28/change-phoenix-server-request-encoding-to-utf8/">Apache Phoenix Server中文乱码问题解决</a>
@@ -376,7 +521,7 @@
           </li>
         
           <li>
-            <a href="/2012/12/25/about-Kiong/">关于Kiong</a>
+            <a href="/2013/01/25/Kiong-Sing/">唱歌跑调</a>
           </li>
         
       </ul>
