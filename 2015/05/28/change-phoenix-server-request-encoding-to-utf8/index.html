@@ -106,11 +106,12 @@
 <p>修改后：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> String jsonRequest =  <span class="keyword">new</span> String(request.getHeader(<span class="string">"request"</span>).getBytes(<span class="string">"ISO-8859-1"</span>), <span class="string">"UTF-8"</span>);</span><br></pre></td></tr></table></figure>
 <p>重新打包，重启Phoenix Server，搞定。</p>
+<p>更新（2015年06月16日）：关于这个问题，我提给Apache Calcite的<a href="https://github.com/apache/incubator-calcite/pull/89" target="_blank" rel="external">PR</a>已经被合了：）</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="ciaoqise8000m07zqsx5r0nyc" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="cibeyr2zj000mlzzqd7gosu2o" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Encoding/">Encoding</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -149,7 +150,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kiong/">Kiong</a><span class="category-list-count">2</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kiong/">Kiong</a><span class="category-list-count">2</span></li></ul>
     </div>
   </div>
 
@@ -158,7 +159,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Encoding/">Encoding</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Hive/">Hive</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Encoding/">Encoding</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Hive/">Hive</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a><span class="tag-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -167,7 +168,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/Avatica/" style="font-size: 15px;">Avatica</a><a href="/tags/Encoding/" style="font-size: 10px;">Encoding</a><a href="/tags/Feature-Construction/" style="font-size: 10px;">Feature Construction</a><a href="/tags/Feature-Engineering/" style="font-size: 10px;">Feature Engineering</a><a href="/tags/Feature-Extraction/" style="font-size: 10px;">Feature Extraction</a><a href="/tags/HBase/" style="font-size: 15px;">HBase</a><a href="/tags/Hive/" style="font-size: 10px;">Hive</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/Phoenix/" style="font-size: 20px;">Phoenix</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a>
+      <a href="/tags/Avatica/" style="font-size: 13.33px;">Avatica</a><a href="/tags/Encoding/" style="font-size: 10px;">Encoding</a><a href="/tags/Feature-Construction/" style="font-size: 10px;">Feature Construction</a><a href="/tags/Feature-Engineering/" style="font-size: 10px;">Feature Engineering</a><a href="/tags/Feature-Extraction/" style="font-size: 10px;">Feature Extraction</a><a href="/tags/HBase/" style="font-size: 16.67px;">HBase</a><a href="/tags/Hive/" style="font-size: 10px;">Hive</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/OpenTSDB/" style="font-size: 10px;">OpenTSDB</a><a href="/tags/Phoenix/" style="font-size: 20px;">Phoenix</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a><a href="/tags/Time-Series-Database/" style="font-size: 10px;">Time Series Database</a>
     </div>
   </div>
 
@@ -176,7 +177,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/06/">六月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/01/">一月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2012/12/">十二月 2012</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/06/">六月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/01/">一月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2012/12/">十二月 2012</a><span class="archive-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -186,6 +187,10 @@
     <h3 class="widget-title">Recents</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/">OpenTSDB Digest: HBase 中时间序列数据表的设计</a>
+          </li>
         
           <li>
             <a href="/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/">从ODS到FEATURE：Apache Hive、HBase、Phoenix三剑客之离线特征工程实战</a>
@@ -201,10 +206,6 @@
         
           <li>
             <a href="/2015/05/15/apache_phoenix_query_hbase_using_sql/">Apache Phoenix: 使用SQL查询HBase</a>
-          </li>
-        
-          <li>
-            <a href="/2013/01/25/Kiong-Sing/">唱歌跑调</a>
           </li>
         
       </ul>

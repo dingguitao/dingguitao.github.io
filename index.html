@@ -61,6 +61,84 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-OpenTSDB-Digest-time-series-data-table-design-on-hbase" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" class="article-date">
+  <time datetime="2015-06-27T07:35:59.000Z" itemprop="datePublished">2015-06-27</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/">OpenTSDB Digest: HBase 中时间序列数据表的设计</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>最近一段时间在做实时数据监控相关的工作，过程中接触到了 <a href="http://opentsdb.net/" target="_blank" rel="external">OpenTSDB</a> 这个架在 Apache HBase 上的时间序列数据库，发现它针对时间序列数据的 HBase Schema 的设计比较巧妙，所以在这里梳理了相关的内容。</p>
+<h2 id="关于时间序列数据（Time_Series_Data）">关于时间序列数据（Time Series Data）</h2><p>在介绍 OpenTSDB 之前，先简单介绍一下时间序列数据。按照 <a href="https://en.wikipedia.org/wiki/Time_series" target="_blank" rel="external">Wikipedia</a> 上的定义，时间序列数据一般指的是一系列的数据点，每个数据点包括数据值和时间值，像最近很火的股市中的K线图、平时用到的操作系统的CPU负载等，都与时间序列数据紧密联系。时间序列数据在实时监控、走势预测上有着很重要的作用，而时间序列数据库做的工作就是能够很高效地完成这些数据的存储和提取。</p>
+<h2 id="关于OpenTSDB">关于OpenTSDB</h2><p>下图为OpenTSDB官网上的架构图，OpenTSDB通过一个或多个TSD（Time Series Daemon）接受数据的读写请求，然后TSD对HBase中的数据进行相应的读写操作，OpenTSDB本身提供了SOCKET和HTTP的API。</p>
+<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/tsdb-architecture.png" alt="OpenTSDB Architecture"></p>
+<p>OpenTSDB中的一个时间序列数据点包含以下的元素：</p>
+<ul>
+<li>metric：该数据点的指标名称，string 类型</li>
+<li>timestamp：该数据点的Unix时间戳，秒级或者毫秒级，long 类型</li>
+<li>value：该数据点的数值，int 或者 float 类型</li>
+<li>tags：数据点的属性，为一组或者多组键值对，键（tagk）和值（tagv）都是字符串类型</li>
+</ul>
+<p>例如在北京时间2015-06-27 17:08:15这个时间点网站上海分站的首页请求数为12345，对应的各元素可能分别是：</p>
+<ul>
+<li>metric：website.request</li>
+<li>timestamp：1435396095</li>
+<li>value：12345</li>
+<li>tags：city=shanghai,page=homepage</li>
+</ul>
+<p>下面简单介绍一下OpenTSDB中几个不错的设计。</p>
+<h2 id="Tags">Tags</h2><p>在 OpenTSDB 中，数据写入时每个数据点必须包含至少一个 tag，在数据查询的时候，用户可以不对 tag 进行过滤，也可以对一个或多个 tag 进行过滤，如果对一个结果时间点返回多个数据的话，用户可以选择对这些数据进行特定的聚合，OpenTSDB 提供了包括 sum、avg、min 和 max 在内的多种<a href="http://opentsdb.net/docs/build/html/user_guide/query/aggregators.html" target="_blank" rel="external">聚合方法</a>。</p>
+<p>还是以刚才的请求数数据为例，我们刚才使用了 city 和 page 这两个 tags，在查询的时候，可以同时达到以下几种场景的需求：</p>
+<ul>
+<li>查询上海分站首页的请求数：过滤条件对 tags 限制 city = shanghai 且 page = homepage</li>
+<li>查询上海分站所有页面的请求数：过滤条件对 tags 限制 city = shanghai</li>
+<li>查询网站所有分站的首页的请求数：过滤条件对 tags 限制 page = homepage</li>
+<li>查询网站的总请求数：过滤条件中不对 tags 作限制</li>
+</ul>
+<p>在查询的时候，OpenTSDB 会把 tags 符合既定过滤条件的所有数据点输出并聚合，而忽略掉过滤条件中不包含的tags，这样我们只需要存一份数据，就可以完成多种不同维度上的数据分析，并且 OpenTSDB HBase Schema 的设计能够保证这种查询的高效率（下面会解释）。</p>
+<p><strong><em>NOTE:</em></strong> <em>对于那些需要去重的指标，tags是不适用的，因为 OpenTSDB 现有的聚合方法中只是对数字的聚合，并不会考虑去重的情况。如果需要统计这样的指标，每一种维度都应该要对应一个独立的metric，例如：website.request.uv.all、website.request.uv.by.city、website.request.uv.by.page等。</em></p>
+<h2 id="UID（Unique_Identifier）">UID（Unique Identifier）</h2><p>OpenTSDB 为每一种 metric、tagk 和 tagv 的值都分别设定了一个独立的 UID，UID 的 mapping 信息存在 tsdb-uid 表中，UID 的分配是自动的（metric 的自动分配需要手动设定 auto metric 为true），例如当 OpenTSDB 第一次遇到 city=shanghai, page=homepage 这个 tags 的时候，它会分别分配值为 1 和 2 的 tagk UID 给 “city” 和 “page”，然后分别分配值为 1 和 2 的 tagv UID 给 “shanghai” 和 “homepage”。</p>
+<p>默认情况下，每个 UID 的存储占用 3 个字节，即对每种类型的 UID 来讲，默认允许的最大独立 UID 数为 2^(8*3) - 1 = 16,777,215 个，如果这个数不够用的话（比如 tagv 的 cardinality 非常高），可以修改源代码。因为使用 UID 代替原始的字符串值进行存储，所以在数据写入的时候要多做一次 UID mapping 的工作，效率可能稍有下降，但是数据存储占用的磁盘空间降低了很多，数据读取的带宽和 IO 消耗也相应地有所减少。</p>
+<h2 id="TSUID（Time_Series_Unique_Indentifier）">TSUID（Time Series Unique Indentifier）</h2><p>在 OpenTSDB 中，每个数据点都会有对应一个 TSUID（事实上，数据点与 TSUID 之间是多对一的关系），时间序列的所有数据存放在 tsdb 一张表中，TSUID 即为表的 ROW KEY，TSUID 是由 metric、timestamp、tags 构成的：</p>
+<p><code>&lt;metric_UID&gt;&lt;timestamp&gt;&lt;tagk1_UID&gt;&lt;tagv1_UID&gt;[...&lt;tagkN_UID&gt;&lt;tagvN_UID&gt;]</code></p>
+<p>还是以我们之前的数据点为例子，这个数据点对应的TSUID如下图所示：</p>
+<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/tsuid.png" alt="TSUID Example"></p>
+<p>通过这样的 ROW KEY 设计，OpenTSDB在查询数据的时候，可以很高效地从 ROW KEY 中获得 metric、timestamp、tags的信息。事实上，OpenTSDB 生成 TSUID的过程中，timestamp 是小时级别的，即对同样 tags 的同一个 metric 的数据，一小时的数据只对应 tsdb 表中的一行，这样一定程度上发挥了 HBase NoSQL 宽表的优势，提高了数据查询的效率。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cibeyr2zy000ylzzq66vcdiye" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+  
     <article id="post-Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/" class="article-date">
@@ -147,7 +225,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/" data-id="ciaoqiscr000007zqq5wxhk3l" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/" data-id="cibeyr2y50000lzzqakwpkzxj" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hive/">Hive</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -203,11 +281,12 @@
 <p>修改后：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> String jsonRequest =  <span class="keyword">new</span> String(request.getHeader(<span class="string">"request"</span>).getBytes(<span class="string">"ISO-8859-1"</span>), <span class="string">"UTF-8"</span>);</span><br></pre></td></tr></table></figure>
 <p>重新打包，重启Phoenix Server，搞定。</p>
+<p>更新（2015年06月16日）：关于这个问题，我提给Apache Calcite的<a href="https://github.com/apache/incubator-calcite/pull/89" target="_blank" rel="external">PR</a>已经被合了：）</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="ciaoqise8000m07zqsx5r0nyc" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="cibeyr2zj000mlzzqd7gosu2o" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Encoding/">Encoding</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -264,7 +343,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="ciaoqise3000f07zqh0cy0qim" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="cibeyr2ze000flzzqxme41207" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Jetty/">Jetty</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -356,7 +435,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/15/apache_phoenix_query_hbase_using_sql/" data-id="ciaoqisec000s07zqohori6iy" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/15/apache_phoenix_query_hbase_using_sql/" data-id="cibeyr2zq000slzzqgeleae78" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a></li></ul>
@@ -405,7 +484,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2013/01/25/Kiong-Sing/" data-id="ciaoqisej000y07zqk0a7tyxn" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2013/01/25/Kiong-Sing/" data-id="cibeyr3020015lzzqgisw95su" class="article-share-link">Share</a>
       
       
     </footer>
@@ -449,7 +528,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2012/12/25/Kiong-About/" data-id="ciaoqisen001107zqa39dqllo" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2012/12/25/Kiong-About/" data-id="cibeyr3050018lzzqmo86cd1h" class="article-share-link">Share</a>
       
       
     </footer>
@@ -468,7 +547,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">4</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kiong/">Kiong</a><span class="category-list-count">2</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kiong/">Kiong</a><span class="category-list-count">2</span></li></ul>
     </div>
   </div>
 
@@ -477,7 +556,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Encoding/">Encoding</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Hive/">Hive</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Encoding/">Encoding</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Hive/">Hive</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a><span class="tag-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -486,7 +565,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/Avatica/" style="font-size: 15px;">Avatica</a><a href="/tags/Encoding/" style="font-size: 10px;">Encoding</a><a href="/tags/Feature-Construction/" style="font-size: 10px;">Feature Construction</a><a href="/tags/Feature-Engineering/" style="font-size: 10px;">Feature Engineering</a><a href="/tags/Feature-Extraction/" style="font-size: 10px;">Feature Extraction</a><a href="/tags/HBase/" style="font-size: 15px;">HBase</a><a href="/tags/Hive/" style="font-size: 10px;">Hive</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/Phoenix/" style="font-size: 20px;">Phoenix</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a>
+      <a href="/tags/Avatica/" style="font-size: 13.33px;">Avatica</a><a href="/tags/Encoding/" style="font-size: 10px;">Encoding</a><a href="/tags/Feature-Construction/" style="font-size: 10px;">Feature Construction</a><a href="/tags/Feature-Engineering/" style="font-size: 10px;">Feature Engineering</a><a href="/tags/Feature-Extraction/" style="font-size: 10px;">Feature Extraction</a><a href="/tags/HBase/" style="font-size: 16.67px;">HBase</a><a href="/tags/Hive/" style="font-size: 10px;">Hive</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/OpenTSDB/" style="font-size: 10px;">OpenTSDB</a><a href="/tags/Phoenix/" style="font-size: 20px;">Phoenix</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a><a href="/tags/Time-Series-Database/" style="font-size: 10px;">Time Series Database</a>
     </div>
   </div>
 
@@ -495,7 +574,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/06/">六月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/01/">一月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2012/12/">十二月 2012</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/06/">六月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/01/">一月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2012/12/">十二月 2012</a><span class="archive-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -505,6 +584,10 @@
     <h3 class="widget-title">Recents</h3>
     <div class="widget">
       <ul>
+        
+          <li>
+            <a href="/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/">OpenTSDB Digest: HBase 中时间序列数据表的设计</a>
+          </li>
         
           <li>
             <a href="/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/">从ODS到FEATURE：Apache Hive、HBase、Phoenix三剑客之离线特征工程实战</a>
@@ -520,10 +603,6 @@
         
           <li>
             <a href="/2015/05/15/apache_phoenix_query_hbase_using_sql/">Apache Phoenix: 使用SQL查询HBase</a>
-          </li>
-        
-          <li>
-            <a href="/2013/01/25/Kiong-Sing/">唱歌跑调</a>
           </li>
         
       </ul>
