@@ -120,7 +120,7 @@
 <p>在查询的时候，OpenTSDB 会把 tags 符合既定过滤条件的所有数据点输出并聚合，而忽略掉过滤条件中不包含的tags，这样我们只需要存一份数据，就可以完成多种不同维度上的数据分析，并且 OpenTSDB HBase Schema 的设计能够保证这种类型查询的高效率完成（下面会解释）。</p>
 <p><strong><em>NOTE:</em></strong> <em>对于那些需要去重的指标，tags是不适用的，因为 OpenTSDB 现有的聚合方法中只是对数字的聚合，并不会考虑去重的情况。如果需要统计这样的指标，每一种维度都应该要对应一个独立的metric，例如：website.request.uv.all、website.request.uv.by.city、website.request.uv.by.page等。</em></p>
 <h2 id="UID（Unique_Identifier）">UID（Unique Identifier）</h2><p>OpenTSDB 为每一种 metric、tagk 和 tagv 的值都分别设定了一个独立的 UID，UID 的 mapping 信息存在 tsdb-uid 表中，UID 的分配是自动的（metric 的自动分配需要手动设定 auto metric 为true），例如当 OpenTSDB 第一次遇到 city=shanghai, page=homepage 这个 tags 的时候，它会分别分配值为 1 和 2 的 tagk UID 给 “city” 和 “page”，然后分别分配值为 1 和 2 的 tagv UID 给 “shanghai” 和 “homepage”。</p>
-<p>默认情况下，每个 UID 的存储占用 3 个字节，即对每种类型的 UID 来讲，默认允许的最大独立 UID 数为 2^(8*3) - 1 = 16,777,215 个，如果这个数不够用的话（比如 tagv 的 cardinality 非常高），可以修改源代码。因为使用 UID 代替原始的字符串值进行存储，所以在数据写入的时候要多做一次 UID mapping 的工作，效率可能稍有下降，但是数据存储占用的磁盘空间降低了很多，数据读取的带宽和 IO 消耗也相应地有所减少。</p>
+<p>默认情况下，每个 UID 的存储占用 3 个字节，即对每种类型的 UID 来讲，默认允许的最大独立 UID 数为 2^(8*3) - 1 = 16,777,215 个，如果这个数不够用的话（比如 tagv 的 cardinality 非常高），可以修改源代码。因为使用 UID 代替原始的字符串值进行存储（这跟关系型数据库中的 star schema 有些类似），所以在数据写入的时候要多做一次 UID mapping 的工作，效率可能稍有下降，但是数据存储占用的磁盘空间降低了很多，数据读取的带宽和 IO 消耗也相应地有所减少。</p>
 <h2 id="TSUID（Time_Series_Unique_Indentifier）">TSUID（Time Series Unique Indentifier）</h2><p>在 OpenTSDB 中，每个数据点都会有对应一个 TSUID（事实上，数据点与 TSUID 之间是多对一的关系），时间序列的所有数据存放在 tsdb 一张表中，TSUID 即为表的 ROW KEY，TSUID 是由 metric、timestamp、tags 构成的：</p>
 <p><code>&lt;metric_UID&gt;&lt;timestamp&gt;&lt;tagk1_UID&gt;&lt;tagv1_UID&gt;[...&lt;tagkN_UID&gt;&lt;tagvN_UID&gt;]</code></p>
 <p>还是以我们之前的数据点为例子，这个数据点对应的TSUID如下图所示：</p>
@@ -130,7 +130,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cibh7ydmk000ypqzqhyo8s4ig" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cibh80xgi000yqyzqe3lbqv7y" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a></li></ul>
