@@ -99,9 +99,9 @@
 <li>metric：该数据点的指标名称，string 类型</li>
 <li>timestamp：该数据点的Unix时间戳，秒级或者毫秒级，long 类型</li>
 <li>value：该数据点的数值，int 或者 float 类型</li>
-<li>tags：数据点的属性，为一组或者多组键值对，键（tagk）和值（tagv）都是字符串类型</li>
+<li>tags：该数据点的属性，为一组或者多组键值对，键（tagk）和值（tagv）都是 string 类型</li>
 </ul>
-<p>例如在北京时间2015-06-27 17:08:15这个时间点网站上海分站的首页请求数为12345，对应的各元素可能分别是：</p>
+<p>例如在北京时间2015-06-27 17:08:15这个时间点网站上海分站的首页请求数为12345，该数据点对应的各元素可以是：</p>
 <ul>
 <li>metric：website.request</li>
 <li>timestamp：1435396095</li>
@@ -110,14 +110,14 @@
 </ul>
 <p>下面简单介绍一下OpenTSDB中几个不错的设计。</p>
 <h2 id="Tags">Tags</h2><p>在 OpenTSDB 中，数据写入时每个数据点必须包含至少一个 tag，在数据查询的时候，用户可以不对 tag 进行过滤，也可以对一个或多个 tag 进行过滤，如果对一个结果时间点返回多个数据的话，用户可以选择对这些数据进行特定的聚合，OpenTSDB 提供了包括 sum、avg、min 和 max 在内的多种<a href="http://opentsdb.net/docs/build/html/user_guide/query/aggregators.html" target="_blank" rel="external">聚合方法</a>。</p>
-<p>还是以刚才的请求数数据为例，我们刚才使用了 city 和 page 这两个 tags，在查询的时候，可以同时达到以下几种场景的需求：</p>
+<p>还是以上面的请求数的数据为例，这个数据点有 city 和 page 两个 tags，在查询的时候，可以同时满足以下几种场景的需求：</p>
 <ul>
-<li>查询上海分站首页的请求数：过滤条件对 tags 限制 city = shanghai 且 page = homepage</li>
-<li>查询上海分站所有页面的请求数：过滤条件对 tags 限制 city = shanghai</li>
-<li>查询网站所有分站的首页的请求数：过滤条件对 tags 限制 page = homepage</li>
-<li>查询网站的总请求数：过滤条件中不对 tags 作限制</li>
+<li>查询<strong>上海分站首页</strong>的请求数：过滤条件对 tags 限制 city = shanghai 且 page = homepage</li>
+<li>查询<strong>上海分站所有页面</strong>的请求数：过滤条件对 tags 限制 city = shanghai</li>
+<li>查询<strong>网站所有分站的首页</strong>的请求数：过滤条件对 tags 限制 page = homepage</li>
+<li>查询<strong>网站总</strong>的请求数：过滤条件中不对 tags 作限制</li>
 </ul>
-<p>在查询的时候，OpenTSDB 会把 tags 符合既定过滤条件的所有数据点输出并聚合，而忽略掉过滤条件中不包含的tags，这样我们只需要存一份数据，就可以完成多种不同维度上的数据分析，并且 OpenTSDB HBase Schema 的设计能够保证这种查询的高效率（下面会解释）。</p>
+<p>在查询的时候，OpenTSDB 会把 tags 符合既定过滤条件的所有数据点输出并聚合，而忽略掉过滤条件中不包含的tags，这样我们只需要存一份数据，就可以完成多种不同维度上的数据分析，并且 OpenTSDB HBase Schema 的设计能够保证这种类型查询的高效率完成（下面会解释）。</p>
 <p><strong><em>NOTE:</em></strong> <em>对于那些需要去重的指标，tags是不适用的，因为 OpenTSDB 现有的聚合方法中只是对数字的聚合，并不会考虑去重的情况。如果需要统计这样的指标，每一种维度都应该要对应一个独立的metric，例如：website.request.uv.all、website.request.uv.by.city、website.request.uv.by.page等。</em></p>
 <h2 id="UID（Unique_Identifier）">UID（Unique Identifier）</h2><p>OpenTSDB 为每一种 metric、tagk 和 tagv 的值都分别设定了一个独立的 UID，UID 的 mapping 信息存在 tsdb-uid 表中，UID 的分配是自动的（metric 的自动分配需要手动设定 auto metric 为true），例如当 OpenTSDB 第一次遇到 city=shanghai, page=homepage 这个 tags 的时候，它会分别分配值为 1 和 2 的 tagk UID 给 “city” 和 “page”，然后分别分配值为 1 和 2 的 tagv UID 给 “shanghai” 和 “homepage”。</p>
 <p>默认情况下，每个 UID 的存储占用 3 个字节，即对每种类型的 UID 来讲，默认允许的最大独立 UID 数为 2^(8*3) - 1 = 16,777,215 个，如果这个数不够用的话（比如 tagv 的 cardinality 非常高），可以修改源代码。因为使用 UID 代替原始的字符串值进行存储，所以在数据写入的时候要多做一次 UID mapping 的工作，效率可能稍有下降，但是数据存储占用的磁盘空间降低了很多，数据读取的带宽和 IO 消耗也相应地有所减少。</p>
@@ -125,12 +125,12 @@
 <p><code>&lt;metric_UID&gt;&lt;timestamp&gt;&lt;tagk1_UID&gt;&lt;tagv1_UID&gt;[...&lt;tagkN_UID&gt;&lt;tagvN_UID&gt;]</code></p>
 <p>还是以我们之前的数据点为例子，这个数据点对应的TSUID如下图所示：</p>
 <p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/tsuid.png" alt="TSUID Example"></p>
-<p>通过这样的 ROW KEY 设计，OpenTSDB在查询数据的时候，可以很高效地从 ROW KEY 中获得 metric、timestamp、tags的信息。事实上，OpenTSDB 生成 TSUID的过程中，timestamp 是小时级别的，即对同样 tags 的同一个 metric 的数据，一小时的数据只对应 tsdb 表中的一行，这样一定程度上发挥了 HBase NoSQL 宽表的优势，提高了数据查询的效率。</p>
+<p>通过这样的 ROW KEY 设计，OpenTSDB在查询数据的时候，可以很高效地从 ROW KEY 中获得 metric、timestamp、tags的信息。事实上，OpenTSDB 生成 TSUID的过程中，timestamp 是小时级别的，即对同样 tags 的同一个 metric 的数据，一小时内的所有数据点（因为可以精确到毫秒，所以最多可能有60 <em> 60 </em> 1000 = 3.6M 个）只对应 tsdb 表中的一行，这样一定程度上发挥了 HBase NoSQL 宽表的优势，提高了数据查询的效率。</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cibeyr2zy000ylzzq66vcdiye" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cibh7ydmk000ypqzqhyo8s4ig" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a></li></ul>
