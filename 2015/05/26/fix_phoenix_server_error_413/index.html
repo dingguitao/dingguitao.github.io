@@ -5,24 +5,15 @@
   
   <title>Apache Phoenix Server 提示 Header 过长（code 413）的解决办法 | 涛声依旧</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="Phoenix 4.4版本发布之后，Phoenix的Query Server也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。
-错误表现在通过JDBC的方式连接到Phoenix Query Server之后，有的查询可以正常执行，有的会直接抛错：
-1response code 413
-在Http的状态码中，">
+  <meta name="description" content="Phoenix 4.4版本发布之后，Phoenix的Query Server也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Apache Phoenix Server 提示 Header 过长（code 413）的解决办法">
 <meta property="og:url" content="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/index.html">
 <meta property="og:site_name" content="涛声依旧">
-<meta property="og:description" content="Phoenix 4.4版本发布之后，Phoenix的Query Server也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。
-错误表现在通过JDBC的方式连接到Phoenix Query Server之后，有的查询可以正常执行，有的会直接抛错：
-1response code 413
-在Http的状态码中，">
+<meta property="og:description" content="Phoenix 4.4版本发布之后，Phoenix的Query Server也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Apache Phoenix Server 提示 Header 过长（code 413）的解决办法">
-<meta name="twitter:description" content="Phoenix 4.4版本发布之后，Phoenix的Query Server也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。
-错误表现在通过JDBC的方式连接到Phoenix Query Server之后，有的查询可以正常执行，有的会直接抛错：
-1response code 413
-在Http的状态码中，">
+<meta name="twitter:description" content="Phoenix 4.4版本发布之后，Phoenix的Query Server也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。">
   
     <link rel="alternative" href="/atom.xml" title="涛声依旧" type="application/atom+xml">
   
@@ -95,6 +86,7 @@
     <div class="article-entry" itemprop="articleBody">
       
         <p>Phoenix 4.4版本发布之后，Phoenix的<a href="http://phoenix.apache.org/server.html" target="_blank" rel="external">Query Server</a>也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。</p>
+<a id="more"></a>
 <h2 id="错误表现">错误表现</h2><p>在通过JDBC的方式连接到Phoenix Query Server之后，有的查询可以正常执行，有的会直接抛错：</p>
 <figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">response <span class="tag">code</span> <span class="number">413</span></span><br></pre></td></tr></table></figure>
 <p>在Http的<a href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html" target="_blank" rel="external">状态码</a>中，413代表的是请求提交的数据量太大，服务器关闭了连接：</p>
@@ -113,7 +105,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="cid5v2n7f000m3xowpmmuos4x" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="cid7anffo000mtpowdiyx8o3x" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Jetty/">Jetty</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>

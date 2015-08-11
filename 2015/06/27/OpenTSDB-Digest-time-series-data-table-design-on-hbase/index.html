@@ -5,20 +5,17 @@
   
   <title>OpenTSDB Digest: HBase 中时间序列数据表的设计 | 涛声依旧</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="最近一段时间在做实时数据监控相关的工作，过程中接触到了 OpenTSDB 这个架在 Apache HBase 上的时间序列数据库，发现它针对时间序列数据的 HBase Schema 的设计比较巧妙，所以在这里梳理了相关的内容。
-关于时间序列数据（Time Series Data）在介绍 OpenTSDB 之前，先简单介绍一下时间序列数据。按照 Wikipedia 上的定义，时间序列数据一般指的是一">
+  <meta name="description" content="最近一段时间在做实时数据监控相关的工作，过程中接触到了 OpenTSDB 这个架在 Apache HBase 上的时间序列数据库，发现它针对时间序列数据的 HBase Schema 的设计比较巧妙，所以在这里梳理了相关的内容。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="OpenTSDB Digest: HBase 中时间序列数据表的设计">
 <meta property="og:url" content="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/index.html">
 <meta property="og:site_name" content="涛声依旧">
-<meta property="og:description" content="最近一段时间在做实时数据监控相关的工作，过程中接触到了 OpenTSDB 这个架在 Apache HBase 上的时间序列数据库，发现它针对时间序列数据的 HBase Schema 的设计比较巧妙，所以在这里梳理了相关的内容。
-关于时间序列数据（Time Series Data）在介绍 OpenTSDB 之前，先简单介绍一下时间序列数据。按照 Wikipedia 上的定义，时间序列数据一般指的是一">
+<meta property="og:description" content="最近一段时间在做实时数据监控相关的工作，过程中接触到了 OpenTSDB 这个架在 Apache HBase 上的时间序列数据库，发现它针对时间序列数据的 HBase Schema 的设计比较巧妙，所以在这里梳理了相关的内容。">
 <meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/tsdb-architecture.png">
 <meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/tsuid.png">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="OpenTSDB Digest: HBase 中时间序列数据表的设计">
-<meta name="twitter:description" content="最近一段时间在做实时数据监控相关的工作，过程中接触到了 OpenTSDB 这个架在 Apache HBase 上的时间序列数据库，发现它针对时间序列数据的 HBase Schema 的设计比较巧妙，所以在这里梳理了相关的内容。
-关于时间序列数据（Time Series Data）在介绍 OpenTSDB 之前，先简单介绍一下时间序列数据。按照 Wikipedia 上的定义，时间序列数据一般指的是一">
+<meta name="twitter:description" content="最近一段时间在做实时数据监控相关的工作，过程中接触到了 OpenTSDB 这个架在 Apache HBase 上的时间序列数据库，发现它针对时间序列数据的 HBase Schema 的设计比较巧妙，所以在这里梳理了相关的内容。">
   
     <link rel="alternative" href="/atom.xml" title="涛声依旧" type="application/atom+xml">
   
@@ -91,6 +88,7 @@
     <div class="article-entry" itemprop="articleBody">
       
         <p>最近一段时间在做实时数据监控相关的工作，过程中接触到了 <a href="http://opentsdb.net/" target="_blank" rel="external">OpenTSDB</a> 这个架在 Apache HBase 上的时间序列数据库，发现它针对时间序列数据的 HBase Schema 的设计比较巧妙，所以在这里梳理了相关的内容。</p>
+<a id="more"></a>
 <h2 id="关于时间序列数据（Time_Series_Data）">关于时间序列数据（Time Series Data）</h2><p>在介绍 OpenTSDB 之前，先简单介绍一下时间序列数据。按照 <a href="https://en.wikipedia.org/wiki/Time_series" target="_blank" rel="external">Wikipedia</a> 上的定义，时间序列数据一般指的是一系列的数据点，每个数据点包括数据值和时间值，像最近很火的股市中的K线图、平时用到的操作系统的CPU负载等，都与时间序列数据紧密联系。时间序列数据在实时监控、走势预测上有着很重要的作用，而时间序列数据库做的工作就是能够很高效地完成这些数据的存储和提取。</p>
 <h2 id="关于OpenTSDB">关于OpenTSDB</h2><p>下图为OpenTSDB官网上的架构图，OpenTSDB通过一个或多个TSD（Time Series Daemon）接受数据的读写请求，然后TSD对HBase中的数据进行相应的读写操作，OpenTSDB本身提供了SOCKET和HTTP的API。</p>
 <p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/tsdb-architecture.png" alt="OpenTSDB Architecture"></p>
@@ -130,7 +128,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cid5v2n7q00153xowgvj3vf0f" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cid7anffy0015tpow31uxzbo8" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a></li></ul>

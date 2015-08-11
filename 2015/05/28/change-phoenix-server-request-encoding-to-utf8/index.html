@@ -5,18 +5,15 @@
   
   <title>Apache Phoenix Server中文乱码问题解决 | 涛声依旧</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="继上次解决Phoenix Server Header长度受限的问题之后，今天又发现了4.4版本的Phoenix Server对含有中文的查询并不友好（新出的东西还是慎用啊），虽然问题的解决方法比较简单，但是为了保持自己写文章的动力（第一次发现自己能把刷文章数辣么猥琐的事情说的这么清新脱俗），还是在这记录一下。
-问题表现今天遇到几个在Phoenix Server的查询返回的结果数都为0，虽然没报错，">
+  <meta name="description" content="继上次解决Phoenix Server Header长度受限的问题之后，今天又发现了4.4版本的Phoenix Server对含有中文的查询并不友好（新出的东西还是慎用啊），虽然问题的解决方法比较简单，但是为了保持自己写文章的动力（第一次发现自己能把刷文章数辣么猥琐的事情说的这么清新脱俗），还是在这记录一下。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Apache Phoenix Server中文乱码问题解决">
 <meta property="og:url" content="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/index.html">
 <meta property="og:site_name" content="涛声依旧">
-<meta property="og:description" content="继上次解决Phoenix Server Header长度受限的问题之后，今天又发现了4.4版本的Phoenix Server对含有中文的查询并不友好（新出的东西还是慎用啊），虽然问题的解决方法比较简单，但是为了保持自己写文章的动力（第一次发现自己能把刷文章数辣么猥琐的事情说的这么清新脱俗），还是在这记录一下。
-问题表现今天遇到几个在Phoenix Server的查询返回的结果数都为0，虽然没报错，">
+<meta property="og:description" content="继上次解决Phoenix Server Header长度受限的问题之后，今天又发现了4.4版本的Phoenix Server对含有中文的查询并不友好（新出的东西还是慎用啊），虽然问题的解决方法比较简单，但是为了保持自己写文章的动力（第一次发现自己能把刷文章数辣么猥琐的事情说的这么清新脱俗），还是在这记录一下。">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Apache Phoenix Server中文乱码问题解决">
-<meta name="twitter:description" content="继上次解决Phoenix Server Header长度受限的问题之后，今天又发现了4.4版本的Phoenix Server对含有中文的查询并不友好（新出的东西还是慎用啊），虽然问题的解决方法比较简单，但是为了保持自己写文章的动力（第一次发现自己能把刷文章数辣么猥琐的事情说的这么清新脱俗），还是在这记录一下。
-问题表现今天遇到几个在Phoenix Server的查询返回的结果数都为0，虽然没报错，">
+<meta name="twitter:description" content="继上次解决Phoenix Server Header长度受限的问题之后，今天又发现了4.4版本的Phoenix Server对含有中文的查询并不友好（新出的东西还是慎用啊），虽然问题的解决方法比较简单，但是为了保持自己写文章的动力（第一次发现自己能把刷文章数辣么猥琐的事情说的这么清新脱俗），还是在这记录一下。">
   
     <link rel="alternative" href="/atom.xml" title="涛声依旧" type="application/atom+xml">
   
@@ -89,6 +86,7 @@
     <div class="article-entry" itemprop="articleBody">
       
         <p>继上次解决Phoenix Server Header长度受限的问题之后，今天又发现了4.4版本的Phoenix Server对含有中文的查询并不友好（新出的东西还是慎用啊），虽然问题的解决方法比较简单，但是为了保持自己写文章的动力（第一次发现自己能把刷文章数辣么猥琐的事情说的这么清新脱俗），还是在这记录一下。</p>
+<a id="more"></a>
 <h2 id="问题表现">问题表现</h2><p>今天遇到几个在Phoenix Server的查询返回的结果数都为0，虽然没报错，但是凭感觉好像有点不对劲，就把同样的查询扔到Phoenix的终端（<code>sqline.py zookeeper</code>）重新跑了一下，果然是有数据返回的。再看之前Server上跑过的几个空结果的查询，发现一个共同的特点就是他们的SQL的Where语句中都包含中文字符，就像下面这样的：</p>
 <figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="operator"><span class="keyword">select</span></span><br><span class="line">    col1,</span><br><span class="line">    col2</span><br><span class="line"><span class="keyword">from</span></span><br><span class="line">    <span class="keyword">table</span></span><br><span class="line"><span class="keyword">where</span></span><br><span class="line">    col0 = <span class="string">'中文'</span></span></span><br></pre></td></tr></table></figure>
 <p>目测应该中文编码出了问题，为了确认，拿了下面这段SQL验证：</p>
@@ -111,7 +109,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="cid5v2n7j000t3xown70d91ir" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="cid7anffs000ttpowpqpd0t2t" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Encoding/">Encoding</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
