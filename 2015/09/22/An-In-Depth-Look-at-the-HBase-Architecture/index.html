@@ -3,17 +3,49 @@
 <head>
   <meta charset="utf-8">
   
-  <title>涛声依旧</title>
+  <title>[译] HBase 架构总览 | 涛声依旧</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description">
-<meta property="og:type" content="website">
-<meta property="og:title" content="涛声依旧">
-<meta property="og:url" content="https://dingguitao.github.io/index.html">
+  <meta name="description" content="一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的一篇博客中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。
+HBase 架构组成HBase 的架构属于主从类型，由三种 Server 构成：
+
+Region Server：负责数据的读写，客户端在操作数据时，直接与 HBase 的 R">
+<meta property="og:type" content="article">
+<meta property="og:title" content="[译] HBase 架构总览">
+<meta property="og:url" content="https://dingguitao.github.io/2015/09/22/An-In-Depth-Look-at-the-HBase-Architecture/index.html">
 <meta property="og:site_name" content="涛声依旧">
-<meta property="og:description">
+<meta property="og:description" content="一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的一篇博客中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。
+HBase 架构组成HBase 的架构属于主从类型，由三种 Server 构成：
+
+Region Server：负责数据的读写，客户端在操作数据时，直接与 HBase 的 R">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBaseArchitectureComponents.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBaseRegions.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBaseMaster.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/ZooKeeper.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/WorkTogether.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20First%20Read%20Write.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Meta%20Table.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Region%20Server%20Components.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Write%20WAL.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Write%20MemStore.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20MemStore.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Region%20Flush.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20HFile.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HFile%20Structure.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HFile%20Index.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Read%20Merge.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Read%20Amplification.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Minor%20Compaction.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Major%20Compaction.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HRegion%20Structure.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Region%20Split.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Read%20Load%20Balancing.png">
+<meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Crash%20Recovery.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="涛声依旧">
-<meta name="twitter:description">
+<meta name="twitter:title" content="[译] HBase 架构总览">
+<meta name="twitter:description" content="一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的一篇博客中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。
+HBase 架构组成HBase 的架构属于主从类型，由三种 Server 构成：
+
+Region Server：负责数据的读写，客户端在操作数据时，直接与 HBase 的 R">
   
     <link rel="alternative" href="/atom.xml" title="涛声依旧" type="application/atom+xml">
   
@@ -59,9 +91,7 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main">
-  
-    <article id="post-An-In-Depth-Look-at-the-HBase-Architecture" class="article article-type-post" itemscope itemprop="blogPost">
+        <section id="main"><article id="post-An-In-Depth-Look-at-the-HBase-Architecture" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2015/09/22/An-In-Depth-Look-at-the-HBase-Architecture/" class="article-date">
   <time datetime="2015-09-22T09:41:04.000Z" itemprop="datePublished">2015-09-22</time>
@@ -78,8 +108,8 @@
       <header class="article-header">
         
   
-    <h1 itemprop="name">
-      <a class="article-title" href="/2015/09/22/An-In-Depth-Look-at-the-HBase-Architecture/">[译] HBase 架构总览</a>
+    <h1 class="article-title" itemprop="name">
+      [译] HBase 架构总览
     </h1>
   
 
@@ -229,432 +259,20 @@
     </footer>
   </div>
   
-</article>
-
-
+    
+<nav id="article-nav">
   
-    <article id="post-OpenTSDB-Digest-HBase-Write-and-Row-Compaction" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2015/09/11/OpenTSDB-Digest-HBase-Write-and-Row-Compaction/" class="article-date">
-  <time datetime="2015-09-11T08:36:20.000Z" itemprop="datePublished">2015-09-11</time>
-</a>
-    
-  <div class="article-category">
-    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
-  </div>
-
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
   
-    <h1 itemprop="name">
-      <a class="article-title" href="/2015/09/11/OpenTSDB-Digest-HBase-Write-and-Row-Compaction/">OpenTSDB Digest：HBase 数据的写入和压缩</a>
-    </h1>
+    <a href="/2015/09/11/OpenTSDB-Digest-HBase-Write-and-Row-Compaction/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">OpenTSDB Digest：HBase 数据的写入和压缩</div>
+    </a>
   
+</nav>
 
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>本文主要介绍 OpenTSDB 时间数据点写入 HBase 和压缩过程中的几个主要步骤，话不多说，上代码。</p>
-        
-          <p class="article-more-link">
-            <a href="/2015/09/11/OpenTSDB-Digest-HBase-Write-and-Row-Compaction/#more">Read More</a>
-          </p>
-        
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/09/11/OpenTSDB-Digest-HBase-Write-and-Row-Compaction/" data-id="cig99x9of00179dow91m9214i" class="article-share-link">Share</a>
-      
-      
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Compaction/">Compaction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a></li></ul>
-
-    </footer>
-  </div>
   
 </article>
 
-
-  
-    <article id="post-qhh" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2015/07/21/qhh/" class="article-date">
-  <time datetime="2015-07-21T12:12:36.000Z" itemprop="datePublished">2015-07-21</time>
-</a>
-    
-  <div class="article-category">
-    <a class="article-category-link" href="/categories/Kiong/">Kiong</a>
-  </div>
-
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2015/07/21/qhh/">青海湖婚纱照＋环湖骑行</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>文章有三周时间没更新了，罪过罪过。</p>
-<p>07.03 - 07.12 这段时间在休假，跟着 Kiong 还有前实验室的学弟学妹们一起去了渴望已久的青海湖，<strong>青海湖茶卡盐湖婚纱照</strong> &amp; <strong>环青海湖骑行</strong>成就达成，过程无比精彩，虽然旅行结束已经十天有余，现在回想起来心情仍是无比激动和愉快。所以写下这篇流水账，记下这段美好的经历。</p>
-        
-          <p class="article-more-link">
-            <a href="/2015/07/21/qhh/#more">Read More</a>
-          </p>
-        
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/07/21/qhh/" data-id="cig99x9nv00099dowqpnu0q3s" class="article-share-link">Share</a>
-      
-      
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Cycling/">Cycling</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Travel/">Travel</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-OpenTSDB-Digest-time-series-data-table-design-on-hbase" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" class="article-date">
-  <time datetime="2015-06-27T07:35:59.000Z" itemprop="datePublished">2015-06-27</time>
-</a>
-    
-  <div class="article-category">
-    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
-  </div>
-
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/">OpenTSDB Digest: HBase 中时间序列数据表的设计</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>最近一段时间在做实时数据监控相关的工作，过程中接触到了 <a href="http://opentsdb.net/">OpenTSDB</a> 这个架在 Apache HBase 上的时间序列数据库，发现它针对时间序列数据的 HBase Schema 的设计比较巧妙，所以在这里梳理了相关的内容。</p>
-        
-          <p class="article-more-link">
-            <a href="/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/#more">Read More</a>
-          </p>
-        
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cig99x9oc00109dowc0y5fe35" class="article-share-link">Share</a>
-      
-      
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/" class="article-date">
-  <time datetime="2015-06-07T04:23:17.000Z" itemprop="datePublished">2015-06-07</time>
-</a>
-    
-  <div class="article-category">
-    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
-  </div>
-
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/">从ODS到FEATURE：Apache Hive、HBase、Phoenix三剑客之离线特征工程实战</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>一个互联网公司，随着业务的不断深入和细化，一般会在数据上对特征类数据的需求会越来越大：机器学习需要大量的对象特征数据来训练模型、半精准或精准化营销需要根据对象特征来进行用户分群、推荐系统需要知道对象特征数据才能完成匹配等等，这么强烈的需求给数据工程师提出了一个比较大的挑战。</p>
-<p>我现在的门特尔泉哥常说：现在是一个最好的时代，因为有那么多轮子可用。的确，“大数据”的火热让数据社区越来越热闹，这也使得一些规模不太大的数据团队可以借助开源的力量完成一些比较挑战的工作。本文（确切说是本人）不会讲任何关于“大数据”的任何内容，只是结合最近做的项目，记录一下使用Apache Hive、HBase和Phoenix这三剑客在特征工程上的实战经历。</p>
-        
-          <p class="article-more-link">
-            <a href="/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/#more">Read More</a>
-          </p>
-        
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/" data-id="cig99x9ot001l9dowj3wy8bql" class="article-share-link">Share</a>
-      
-      
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hive/">Hive</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-change-phoenix-server-request-encoding-to-utf8" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" class="article-date">
-  <time datetime="2015-05-28T11:27:36.000Z" itemprop="datePublished">2015-05-28</time>
-</a>
-    
-  <div class="article-category">
-    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
-  </div>
-
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2015/05/28/change-phoenix-server-request-encoding-to-utf8/">Apache Phoenix Server中文乱码问题解决</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>继上次解决Phoenix Server Header长度受限的问题之后，今天又发现了4.4版本的Phoenix Server对含有中文的查询并不友好（新出的东西还是慎用啊），虽然问题的解决方法比较简单，但是为了保持自己写文章的动力（第一次发现自己能把刷文章数辣么猥琐的事情说的这么清新脱俗），还是在这记录一下。</p>
-        
-          <p class="article-more-link">
-            <a href="/2015/05/28/change-phoenix-server-request-encoding-to-utf8/#more">Read More</a>
-          </p>
-        
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="cig99x9o6000o9dowmhzglfe6" class="article-share-link">Share</a>
-      
-      
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Encoding/">Encoding</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-fix_phoenix_server_error_413" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2015/05/26/fix_phoenix_server_error_413/" class="article-date">
-  <time datetime="2015-05-26T08:04:07.000Z" itemprop="datePublished">2015-05-26</time>
-</a>
-    
-  <div class="article-category">
-    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
-  </div>
-
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2015/05/26/fix_phoenix_server_error_413/">Apache Phoenix Server 提示 Header 过长（code 413）的解决办法</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>Phoenix 4.4版本发布之后，Phoenix的<a href="http://phoenix.apache.org/server.html">Query Server</a>也终于浮出水面。在尝试使用Phoenix Server的时候遇到了一个服务器响应代码为413的错误，经过大半天的折腾终于解决了，特此记录一下。</p>
-        
-          <p class="article-more-link">
-            <a href="/2015/05/26/fix_phoenix_server_error_413/#more">Read More</a>
-          </p>
-        
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="cig99x9o3000g9dowvtxp6lyj" class="article-share-link">Share</a>
-      
-      
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Jetty/">Jetty</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-apache_phoenix_query_hbase_using_sql" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2015/05/15/apache_phoenix_query_hbase_using_sql/" class="article-date">
-  <time datetime="2015-05-15T07:27:04.000Z" itemprop="datePublished">2015-05-15</time>
-</a>
-    
-  <div class="article-category">
-    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
-  </div>
-
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2015/05/15/apache_phoenix_query_hbase_using_sql/">Apache Phoenix: 使用SQL查询HBase</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="I-_Apache_Phoenix_简介">I. Apache Phoenix 简介</h2><p><a href="http://phoenix.apache.org/index.html">Apache Phoenix</a>（以下简称Phoenix）是架在HBase上面的一个关系型数据库层，这意味着我们可以使用传统的SQL语言来查询HBase这个NoSQL数据库中的数据，官网号称可以对百万行以上级别的表进行秒级的查询。</p>
-<p>Phoenix是由Salesforce.com开源出来的项目，创立的使命在于提供一个友好的HBase数据API。现在是Apache下的开源项目，截止这篇文章诞生之日，Phoenix的版本更新到了4.3.1，已经是一个比较成熟的软件，并且社区也比较活跃，发到邮件组的问题一般都能很快得到解答，Hortonworks的产品中已经整合了Phoenix，Cloudera也在准备了。</p>
-        
-          <p class="article-more-link">
-            <a href="/2015/05/15/apache_phoenix_query_hbase_using_sql/#more">Read More</a>
-          </p>
-        
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/15/apache_phoenix_query_hbase_using_sql/" data-id="cig99x9oa000u9dow727l3xif" class="article-share-link">Share</a>
-      
-      
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a></li></ul>
-
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-Kiong-GDP" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2013/03/25/Kiong-GDP/" class="article-date">
-  <time datetime="2013-03-25T12:00:17.000Z" itemprop="datePublished">2013-03-25</time>
-</a>
-    
-  <div class="article-category">
-    <a class="article-category-link" href="/categories/Kiong/">Kiong</a>
-  </div>
-
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2013/03/25/Kiong-GDP/">2000 块的 GDP</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>实验室的 D 同学在老家刚结婚回来，决定宴请全实验室的师生，在做预算的时候向大家叨咕道：“大家不喝酒的话花费 xxxx 左右，喝酒的话还要加 2k”。</p>
-<p>刚被册封了“组会活跃分子”的 Kiong 说道：“大家喝不喝酒，还不是我一句话的事儿？！我喝的话，大家就会喝；我不喝，大家也就不会喝啦。”</p>
-<p>站在一旁的我感觉自己真得好幸福能够拥有一个这么强大的女朋友，金口一开，就是 2000 块的 GDP！</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2013/03/25/Kiong-GDP/" data-id="cig99x9ok001h9dow2oh2bmow" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-    <article id="post-Kiong-Role-at-Lab" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2013/02/25/Kiong-Role-at-Lab/" class="article-date">
-  <time datetime="2013-02-25T12:06:44.000Z" itemprop="datePublished">2013-02-25</time>
-</a>
-    
-  <div class="article-category">
-    <a class="article-category-link" href="/categories/Kiong/">Kiong</a>
-  </div>
-
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2013/02/25/Kiong-Role-at-Lab/">气氛活跃分子</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>估计 Boss Jiang 再也忍受不了自己的学生在组会上沉默、瞌睡、玩手机了，于是 Kiong 被安排了新的任务：负责在组会上活跃气氛，组。。会。。。。活。。跃。。气。。氛。。。。</p>
-<p>真的是科研生涯中浓墨重彩的一笔呢！</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2013/02/25/Kiong-Role-at-Lab/" data-id="cig99x9oj001f9dowxf0r5zte" class="article-share-link">Share</a>
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-  
-  
-    <nav id="page-nav">
-      <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/">Next &raquo;</a>
-    </nav>
-  
 </section>
         
           <aside id="sidebar">
