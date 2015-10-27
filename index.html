@@ -87,141 +87,16 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的<a href="https://www.mapr.com/blog/in-depth-look-hbase-architecture" target="_blank" rel="external">一篇博客</a>中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。</p>
-<h2 id="HBase_架构组成">HBase 架构组成</h2><p>HBase 的架构属于主从类型，由三种 Server 构成：</p>
-<ul>
-<li>Region Server：负责数据的读写，客户端在操作数据时，直接与 HBase 的 Region Server 们进行通信。</li>
-<li>Master：Region 的分配、DDL（增删表）操作都在 HBase 的 Master 上完成。</li>
-<li>Zookeeper：维持集群的运行状态。</li>
-</ul>
-<p>Region Server 上的数据都存放在 Hadoop 的 DataNode 上的，HBase 上的所有数据都存放在 HDFS 上。HBase 的 Region Server 本身也是 Hadoop 的 DataNode，这样就保证了 Region Server 的数据本地化（把数据放得更靠近最需要用数据的地方）。HBase 的数据在刚写入的时候是存放在本地的，但是如果中间一个 region 发生了移动，那么这份数据就不在本地了，直到发生一次 HBase 的 Major Compaction。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBaseArchitectureComponents.png" alt="HBase Architecture Components"></p>
-<h2 id="Regions">Regions</h2><p>HBase 的表根据 row key 的范围分成了很多个“Regions”，每个 region 包含了该 region 起始 row key 和 终止 row key 之间包含的所有行的数据，这些 region 会被分配到集群各个 region server 对应的节点上，并提供数据的读写服务，一个 region server 可以管理约 1000 个 region。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBaseRegions.png" alt="HBase Regions"></p>
-<h2 id="Master">Master</h2><p>HBase Master 主要负责以下事项：</p>
-<ul>
-<li>协调各个 region server<ul>
-<li>启动的时候分配 region，在恢复或负载均衡的时候重分配 region</li>
-<li>监控集群上所有 region server 实例的生存状态（通过监听 ZooKeeper 的通知）</li>
-</ul>
-</li>
-<li><p>管理功能</p>
-<ul>
-<li>提供增删改表的接口</li>
-</ul>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBaseMaster.png" alt="HBase Master"></p>
-</li>
-</ul>
-<h2 id="ZooKeeper：协调大师">ZooKeeper：协调大师</h2><p>HBase 使用 ZooKeeper 的分布式协调服务来维护集群中 server 的状态。ZooKeeper 维护着每个活着可用的 server，并提供 server 的故障通知。Zookeeper 使用一致性算法来保证共享状态的一致性，所以 ZooKeeper 一般需要 3 或 5 台机器。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/ZooKeeper.png" alt="ZooKeeper"></p>
-<h2 id="各个成员的相互合作">各个成员的相互合作</h2><p>ZooKeeper 用于协调分布式系统中各成员间共享的状态信息，HBase Region Server 们和活着的 HBase Master 连接到 ZooKeeper 之后各自创建一个 ephemeral 节点，ZooKeeper 通过心跳机制来维护这些节点的活跃状态。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/WorkTogether.png" alt="Work Together"></p>
-<p>每一个 region server 都会创建一个 ephemeral 节点，HMaster 通过监控这些节点来发现可用的 region server 和监控 region server 的故障。HMaster 们通过竞争创建一个 ephemeral 节点，ZooKeeper 会选举出一个节点并保证只有一个 master 是生效的。生效的 HMaster 会向 ZooKeeper 发送心跳，而不活跃的 HMaster 会监听生效的 HMaster 的故障通知。</p>
-<p>如果一个 region server 或者活跃的 HMaster 发送心跳失败，他们与 ZooKeeper 之间的连接就会中断，对应的 ephemeral 节点也会被删除，这些节点的监听者就会被通知。活跃的 HMaster 监听 region server 们的状态，并在故障的时候恢复 region server；非活跃的 HMaster 监听活跃 HMaster 的状态，并在活跃 HMaster 故障的时候自动变成活跃的 HMaster。</p>
-<h2 id="HBase_的第一次读写">HBase 的第一次读写</h2><p>HBase 中有一张特殊的目录表：META 表，这张表保存了集群所有 region 的位置信息，ZooKeeper 保存了 META 表的位置信息。</p>
-<p>客户端向 HBase 发送第一次读或者写请求时的步骤是这样的：</p>
-<ul>
-<li><ol>
-<li>客户端从 ZooKeeper 获取到存储 META 表的 region server。</li>
-</ol>
-</li>
-<li><ol>
-<li>客户端获取想访问的 row key 所在的 region server。</li>
-</ol>
-</li>
-<li><ol>
-<li>客户端从对应的 region server 上获取访问的行。</li>
-</ol>
-</li>
-</ul>
-<p>客户端会缓存 META 表和之前读过的 row key 的信息，在之后的读写中，这个客户端就无需再查询 META 表，除非有 region 迁移的情况导致查询失败，这样的情况下客户端会重新查询该 row key 的信息并更新本地的缓存。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20First%20Read%20Write.png" alt="HBase First Read or Write"></p>
-<h2 id="HBase_META_表">HBase META 表</h2><ul>
-<li>META 表是 HBase 的一张表，保存了系统中所有 region 的信息。</li>
-<li>META 实际上就是一个 B Tree。</li>
-<li>META 表的结构如下：<ul>
-<li>Key：region 的起始 row key，region ID</li>
-<li>Values：region server</li>
-</ul>
-</li>
-</ul>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Meta%20Table.png" alt="HBase Meta Table"></p>
-<h2 id="Region_Server_组件">Region Server 组件</h2><p>Region Server 在 HDFS data node 上运行，包含以下组件：</p>
-<ul>
-<li>WAL (Write Ahead Log)：预写式日志是分布式文件系统中的文件，存放还没被持久化到永久存储的数据，可在故障后恢复数据时使用。</li>
-<li>BlockCache：读缓存，在内存中保存最近读过的数据，使用的是 LRU 算法。</li>
-<li>MemStore：写缓存，保存还未被写入磁盘的新数据，数据在写入之前会先排序，每个 region 的每个列族对应一个 MemStore。</li>
-<li>HFile：在磁盘中以 Key Value 的形式存放排序过后的行。</li>
-</ul>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Region%20Server%20Components.png" alt="HBase Region Server Components"></p>
-<h2 id="HBase_写数据步骤_I：WAL">HBase 写数据步骤 I：WAL</h2><p>当客户端发起一次写请求的时候，第一步是将数据写入 WAL：</p>
-<ul>
-<li>数据的操作会被添加到 WAL 文件（保存在硬盘上）的末尾。</li>
-<li>WAL 用于服务器故障后未持久化数据的恢复。</li>
-</ul>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Write%20WAL.png" alt="HBase Write WAL"></p>
-<h2 id="HBase_写数据步骤_II：MemStore">HBase 写数据步骤 II：MemStore</h2><p>数据被写入 WAL之后，会接着保存在 MemStore 中，然后客户端将会收到数据已被接受的响应。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Write%20MemStore.png" alt="HBase Write MemStore"></p>
-<p>MemStore 将写入的数据按照排序好的 Key Value 的形式存放于内存中，数据的排列顺序跟在 HFile 中的一致。每一个列族都会对应一个独立的 MemStore。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20MemStore.png" alt="HBase MemStore"></p>
-<h2 id="HBase_写数据步骤_III：HFile">HBase 写数据步骤 III：HFile</h2><p>当 MemStore 中积累了足够多的数据，所有排序后的数据就会写入到 HDFS 上的一个新的 HFile 中。每个 HBase 的列族会对应一个或多个 HFile，HFile 中存放了 Key Value 的实例，并随着数据的不断写入不断被创建。</p>
-<p>正如刚才说过的，每个列族都会对应一个独立的 MemStore，如果一个 MemStore 的大小达到了上限，所有的 MemStore 都会将数据写入磁盘，即磁盘的写入是 region 级别的，非 MemStore / 列族 级别，这也是一个 HBase 表不能有太多列族的原因。</p>
-<p>每次写入磁盘之后，最大的写入序列号会被保存在每个 HFile 的 meta 字段，用来表示上次持久化的位置。当一个 region 启动的时候，序列号们就会被读取，然后最大的一个用来标识新数据开始的位置。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Region%20Flush.png" alt="HBase Region Flush"></p>
-<p>由于 HFile 的写入是按顺序写，减少了磁盘指针的移动，所以效率比较高。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20HFile.png" alt="HFile"></p>
-<h2 id="HFile_的结构">HFile 的结构</h2><p>HFile 中包含一个多级的索引，这使得 HBase 不用读取整个文件就可以找到想要的数据，这个多级的索引就像一个 B+Tree：</p>
-<ul>
-<li>Key Value 对按照升序保存</li>
-<li>Key Value 的数据会分块，每块 64 KB</li>
-<li>每个数据块都有自己的 leaf index</li>
-<li>每个数据块的最后一个 row key 会存放在 intermediate index 中</li>
-<li>root index 指向 intermediate index</li>
-</ul>
-<p>在 HFile 的末尾，存在一个指向 meta 块的 trailer，trailer 同时还包含其它的信息：</p>
-<ul>
-<li>Bloom Filter：通过 row key 过滤，减少需要查询的文件</li>
-<li>Time Range：通过时间过滤，减少需要查询的文件</li>
-</ul>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HFile%20Structure.png" alt="HFile Structure"></p>
-<p>HFile 的索引会在该文件被打开的时候装载入内存，提高读的效率。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HFile%20Index.png" alt="HFile Index"></p>
-<h2 id="HBase_读数据步骤">HBase 读数据步骤</h2><p>从上面 Region Server 的组件可以看到，一个 row key 对应的数据可能存在于多个地方：持久化的数据在 HFile 中，最近更新的数据在 MemStore 中，最近读过的数据在 Block Cache 中。当客户端发来一个读请求的时候，HBase 读数据的步骤如下：</p>
-<ul>
-<li>首先读采用 LRU 算法的 Block Cache，这里保存了最近读过的数据。</li>
-<li>接着读 MemStore，这里保存了最近更新过的数据。</li>
-<li>如果前两步没有找到数据，HBase 会接着根据 HFile 的索引和 Bloom Filter 将目标 HFile 载入内存，然后获取目标 row key 对应的数据。</li>
-</ul>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Read%20Merge.png" alt="HBase Read Merge"></p>
-<p>正如之前说的，每个 MemStore 可能会对应多个 HFile，这意味着每一次读请求会将多个 HFile 都检查一遍，这种读放大的现象降低了读的效率。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Read%20Amplification.png" alt="HBase Read Amplification"></p>
-<h2 id="HBase_Compaction">HBase Compaction</h2><ul>
-<li>Minor Compaction：通过合并排序，自动将多数个小 HFile 合并成少数个大的 HFile。</li>
-</ul>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Minor%20Compaction.png" alt="Minor Compaction"></p>
-<ul>
-<li>Major Compaction：将同一个 region 同一个列族的所有 HFile 合并为一个 HFile，并在此过程中删除已经过期或者带有删除标记数据，将非本地的 region 数据移动到 region server 本地。这会提高读数据的效率，但是由于会重写所有的文件，这种写放大会造成大量的磁盘和网络 IO。</li>
-</ul>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Major%20Compaction.png" alt="Major Compaction"></p>
-<h2 id="Region：连续的键">Region：连续的键</h2><p>HBase Region 概览：</p>
-<ul>
-<li>一张表可以水平地被分成一个或多个 region，一个 region 包含起始键和终止键之间排序过的列。</li>
-<li>每个 region 默认大小是 1 GB。</li>
-<li>客户端直接通过 region server 访问 region。</li>
-<li>一个 region server 上可以有大概 1000 个 region（可以属于不同的表）。</li>
-</ul>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HRegion%20Structure.png" alt="HBase Region Structure"></p>
-<p>起始的时候（译注：在没有做手动 split 的前提下）一张表只有一个 region，当此 region 增长到一定大小的时候，就会被分成两个 region，这两个 region 还是在原来的 region server 上，并且这次分裂会汇报给 HMaster。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Region%20Split.png" alt="HBase Region Split"></p>
-<p>为了负载均衡，HMaster 可能会将新的 region 移动到其它 region server 上去，这样就导致了 region 数据非本地化（数据存放在另外一台 HDFS data node 上）。不过再经过一次 major compaction 之后，数据又会变成本地化。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Read%20Load%20Balancing.png" alt="HBase Read Load Balancing"></p>
-<h2 id="故障后的数据恢复">故障后的数据恢复</h2><p>发生故障之后，HBase 会重新读 WAL 文件，将数据的更新操作重新写入 MemStore 并最终持久化到 HFile中；如果一个 region server 挂了，这个时候 ZooKeeper 会通过心跳机制监测到这种故障并报告给 HMaster，HMaster 会将这台 region server 上的所有 region 分配给其它活着的 region server 们，这台 region server 上的 WAL 文件也会被分成多个独立的文件分发到其它活着的 region server 上去，然后其它 region server 会将这些 WAL 中包含的数据更新重新写入 MemStore。</p>
-<p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Crash%20Recovery.png" alt="HBase Crash Recovery"></p>
-
+        <p>一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的<a href="https://www.mapr.com/blog/in-depth-look-hbase-architecture">一篇博客</a>中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。</p>
+        
+          <p class="article-more-link">
+            <a href="/2015/09/22/An-In-Depth-Look-at-the-HBase-Architecture/#more">Read More</a>
+          </p>
+        
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/09/22/An-In-Depth-Look-at-the-HBase-Architecture/" data-id="cig99x9n500009dowkjzok9uz" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/09/22/An-In-Depth-Look-at-the-HBase-Architecture/" data-id="cig9aynkq000041ow01zv2c70" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Architecture/">Architecture</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HFile/">HFile</a></li></ul>
@@ -268,7 +143,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/09/11/OpenTSDB-Digest-HBase-Write-and-Row-Compaction/" data-id="cig99x9of00179dow91m9214i" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/09/11/OpenTSDB-Digest-HBase-Write-and-Row-Compaction/" data-id="cig9aynnz001741owqviyhp97" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Compaction/">Compaction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a></li></ul>
@@ -316,7 +191,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/07/21/qhh/" data-id="cig99x9nv00099dowqpnu0q3s" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/07/21/qhh/" data-id="cig9aynn1000941ow01kyjmm5" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Cycling/">Cycling</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Travel/">Travel</a></li></ul>
@@ -363,7 +238,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cig99x9oc00109dowc0y5fe35" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cig9aynnu001041owd8ahoole" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a></li></ul>
@@ -411,7 +286,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/" data-id="cig99x9ot001l9dowj3wy8bql" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/" data-id="cig9aynok001l41owaady9miq" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Hive/">Hive</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -458,7 +333,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="cig99x9o6000o9dowmhzglfe6" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/28/change-phoenix-server-request-encoding-to-utf8/" data-id="cig9aynnk000o41owsl4o5yw6" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Encoding/">Encoding</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -505,7 +380,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="cig99x9o3000g9dowvtxp6lyj" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="cig9aynnd000g41owwqogy2a6" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Jetty/">Jetty</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -553,7 +428,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/15/apache_phoenix_query_hbase_using_sql/" data-id="cig99x9oa000u9dow727l3xif" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/15/apache_phoenix_query_hbase_using_sql/" data-id="cig9aynnr000u41owrp3ejdth" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a></li></ul>
@@ -598,7 +473,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2013/03/25/Kiong-GDP/" data-id="cig99x9ok001h9dow2oh2bmow" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2013/03/25/Kiong-GDP/" data-id="cig9aynod001h41owvprcdgve" class="article-share-link">Share</a>
       
       
     </footer>
@@ -640,7 +515,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2013/02/25/Kiong-Role-at-Lab/" data-id="cig99x9oj001f9dowxf0r5zte" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2013/02/25/Kiong-Role-at-Lab/" data-id="cig9aynoa001f41owm13xdjdn" class="article-share-link">Share</a>
       
       
     </footer>

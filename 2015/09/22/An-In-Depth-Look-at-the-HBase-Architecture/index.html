@@ -5,18 +5,12 @@
   
   <title>[译] HBase 架构总览 | 涛声依旧</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的一篇博客中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。
-HBase 架构组成HBase 的架构属于主从类型，由三种 Server 构成：
-
-Region Server：负责数据的读写，客户端在操作数据时，直接与 HBase 的 R">
+  <meta name="description" content="一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的一篇博客中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="[译] HBase 架构总览">
 <meta property="og:url" content="https://dingguitao.github.io/2015/09/22/An-In-Depth-Look-at-the-HBase-Architecture/index.html">
 <meta property="og:site_name" content="涛声依旧">
-<meta property="og:description" content="一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的一篇博客中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。
-HBase 架构组成HBase 的架构属于主从类型，由三种 Server 构成：
-
-Region Server：负责数据的读写，客户端在操作数据时，直接与 HBase 的 R">
+<meta property="og:description" content="一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的一篇博客中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。">
 <meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBaseArchitectureComponents.png">
 <meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBaseRegions.png">
 <meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBaseMaster.png">
@@ -42,10 +36,7 @@ Region Server：负责数据的读写，客户端在操作数据时，直接与 
 <meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20Crash%20Recovery.png">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="[译] HBase 架构总览">
-<meta name="twitter:description" content="一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的一篇博客中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。
-HBase 架构组成HBase 的架构属于主从类型，由三种 Server 构成：
-
-Region Server：负责数据的读写，客户端在操作数据时，直接与 HBase 的 R">
+<meta name="twitter:description" content="一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的一篇博客中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。">
   
     <link rel="alternative" href="/atom.xml" title="涛声依旧" type="application/atom+xml">
   
@@ -118,6 +109,7 @@ Region Server：负责数据的读写，客户端在操作数据时，直接与 
     <div class="article-entry" itemprop="articleBody">
       
         <p>一直想写一篇关于 Apache HBase 架构的文章，后来看到 MapR 的<a href="https://www.mapr.com/blog/in-depth-look-hbase-architecture" target="_blank" rel="external">一篇博客</a>中已经有了一篇，文章的组织和结构都比较清楚，于是拿来翻译一下帮助自己理解，原文中比较啰嗦的地方我在翻译过程中精简了，排版也稍微修改了一些。</p>
+<a id="more"></a>
 <h2 id="HBase_架构组成">HBase 架构组成</h2><p>HBase 的架构属于主从类型，由三种 Server 构成：</p>
 <ul>
 <li>Region Server：负责数据的读写，客户端在操作数据时，直接与 HBase 的 Region Server 们进行通信。</li>
@@ -151,18 +143,9 @@ Region Server：负责数据的读写，客户端在操作数据时，直接与 
 <h2 id="HBase_的第一次读写">HBase 的第一次读写</h2><p>HBase 中有一张特殊的目录表：META 表，这张表保存了集群所有 region 的位置信息，ZooKeeper 保存了 META 表的位置信息。</p>
 <p>客户端向 HBase 发送第一次读或者写请求时的步骤是这样的：</p>
 <ul>
-<li><ol>
 <li>客户端从 ZooKeeper 获取到存储 META 表的 region server。</li>
-</ol>
-</li>
-<li><ol>
 <li>客户端获取想访问的 row key 所在的 region server。</li>
-</ol>
-</li>
-<li><ol>
 <li>客户端从对应的 region server 上获取访问的行。</li>
-</ol>
-</li>
 </ul>
 <p>客户端会缓存 META 表和之前读过的 row key 的信息，在之后的读写中，这个客户端就无需再查询 META 表，除非有 region 迁移的情况导致查询失败，这样的情况下客户端会重新查询该 row key 的信息并更新本地的缓存。</p>
 <p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/HBase%20First%20Read%20Write.png" alt="HBase First Read or Write"></p>
@@ -251,7 +234,7 @@ Region Server：负责数据的读写，客户端在操作数据时，直接与 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/09/22/An-In-Depth-Look-at-the-HBase-Architecture/" data-id="cig99x9n500009dowkjzok9uz" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/09/22/An-In-Depth-Look-at-the-HBase-Architecture/" data-id="cig9aynkq000041ow01zv2c70" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Architecture/">Architecture</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HFile/">HFile</a></li></ul>
