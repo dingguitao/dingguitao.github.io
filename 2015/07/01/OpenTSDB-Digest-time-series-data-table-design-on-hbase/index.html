@@ -8,7 +8,7 @@
   <meta name="description" content="最近一段时间在做实时数据监控相关的工作，过程中接触到了 OpenTSDB 这个架在 Apache HBase 上的时间序列数据库，发现它针对时间序列数据的 HBase Schema 的设计比较巧妙，所以在这里梳理了相关的内容。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="OpenTSDB Digest: HBase 中时间序列数据表的设计">
-<meta property="og:url" content="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/index.html">
+<meta property="og:url" content="https://dingguitao.github.io/2015/07/01/OpenTSDB-Digest-time-series-data-table-design-on-hbase/index.html">
 <meta property="og:site_name" content="涛声依旧">
 <meta property="og:description" content="最近一段时间在做实时数据监控相关的工作，过程中接触到了 OpenTSDB 这个架在 Apache HBase 上的时间序列数据库，发现它针对时间序列数据的 HBase Schema 的设计比较巧妙，所以在这里梳理了相关的内容。">
 <meta property="og:image" content="http://7xjkvk.com1.z0.glb.clouddn.com/tsdb-architecture.png">
@@ -63,8 +63,8 @@
       <div class="outer">
         <section id="main"><article id="post-OpenTSDB-Digest-time-series-data-table-design-on-hbase" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
-    <a href="/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" class="article-date">
-  <time datetime="2015-06-27T07:35:59.000Z" itemprop="datePublished">2015-06-27</time>
+    <a href="/2015/07/01/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" class="article-date">
+  <time datetime="2015-07-01T07:35:59.000Z" itemprop="datePublished">2015-07-01</time>
 </a>
     
   <div class="article-category">
@@ -118,7 +118,7 @@
 <p>在查询的时候，OpenTSDB 会把 tags 符合既定过滤条件的所有数据点输出并聚合，而忽略掉过滤条件中不包含的tags，这样我们只需要存一份数据，就可以完成多种不同维度上的数据分析，并且 OpenTSDB HBase Schema 的设计能够保证这种类型查询的高效率完成（下面会解释）。</p>
 <p><strong><em>NOTE:</em></strong> <em>对于那些需要去重的指标，tags是不适用的，因为 OpenTSDB 现有的聚合方法中只是对数字的聚合，并不会考虑去重的情况。如果需要统计这样的指标，每一种维度都应该要对应一个独立的metric，例如：website.request.uv.all、website.request.uv.by.city、website.request.uv.by.page等。</em></p>
 <h2 id="UID（Unique_Identifier）">UID（Unique Identifier）</h2><p>OpenTSDB 为每一种 metric、tagk 和 tagv 的值都分别设定了一个独立的 UID，UID 的 mapping 信息存在 tsdb-uid 表中，UID 的分配是自动的（metric 的自动分配需要手动设定 auto metric 为true），例如当 OpenTSDB 第一次遇到 city=shanghai, page=homepage 这个 tags 的时候，它会分别分配值为 1 和 2 的 tagk UID 给 “city” 和 “page”，然后分别分配值为 1 和 2 的 tagv UID 给 “shanghai” 和 “homepage”。</p>
-<p>默认情况下，每个 UID 的存储占用 3 个字节，即对每种类型的 UID 来讲，默认允许的最大独立 UID 数为 2^(8*3) - 1 = 16,777,215 个，如果这个数不够用的话（比如 tagv 的 cardinality 非常高），可以修改源代码。因为使用 UID 代替原始的字符串值进行存储（这跟关系型数据库中的 star schema 有些类似），所以在数据写入的时候要多做一次 UID mapping 的工作，效率可能稍有下降，但是数据存储占用的磁盘空间降低了很多，数据读取的带宽和 IO 消耗也相应地有所减少。</p>
+<p>默认情况下，每个 UID 的存储占用 3 个字节，即对每种类型的 UID 来讲，默认允许的最大独立 UID 数为 2^(8*3) - 1 = 16,777,215 个，如果这个数不够用的话（比如 tagv 的 cardinality 非常高），可以修改源代码。因为使用 UID 代替原始的字符串值进行存储（这跟关系型数据库中的 star schema 有些类似），所以在数据写入的时候要多做一次 UID mapping 的工作，效率可能稍有下降，但是数据存储占用的磁盘空间降低了很多，数据读取的带宽磁盘 IO 消耗也相应地有所减少。</p>
 <h2 id="TSUID（Time_Series_Unique_Indentifier）">TSUID（Time Series Unique Indentifier）</h2><p>在 OpenTSDB 中，每个数据点都会有对应一个 TSUID（事实上，数据点与 TSUID 之间是多对一的关系），时间序列的所有数据存放在 tsdb 一张表中，TSUID 即为表的 ROW KEY，TSUID 是由 metric、timestamp、tags 构成的：</p>
 <p><code>&lt;metric_UID&gt;&lt;timestamp&gt;&lt;tagk1_UID&gt;&lt;tagv1_UID&gt;[...&lt;tagkN_UID&gt;&lt;tagvN_UID&gt;]</code></p>
 <p>还是以我们之前的数据点为例子，这个数据点对应的TSUID如下图所示：</p>
@@ -128,7 +128,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cig9aynnu001041owd8ahoole" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/07/01/OpenTSDB-Digest-time-series-data-table-design-on-hbase/" data-id="cigdauxfd0010fpowth8yahzh" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a></li></ul>
@@ -167,7 +167,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">7</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kiong/">Kiong</a><span class="category-list-count">5</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">8</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kiong/">Kiong</a><span class="category-list-count">5</span></li></ul>
     </div>
   </div>
 
@@ -176,7 +176,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Architecture/">Architecture</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Compaction/">Compaction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Cycling/">Cycling</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Encoding/">Encoding</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">5</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HFile/">HFile</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Hive/">Hive</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Travel/">Travel</a><span class="tag-list-count">1</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Architecture/">Architecture</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Compaction/">Compaction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Cycling/">Cycling</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Encoding/">Encoding</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">6</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HFile/">HFile</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Hive/">Hive</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Read/">Read</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Travel/">Travel</a><span class="tag-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -185,7 +185,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/Architecture/" style="font-size: 10px;">Architecture</a><a href="/tags/Avatica/" style="font-size: 13.33px;">Avatica</a><a href="/tags/Compaction/" style="font-size: 10px;">Compaction</a><a href="/tags/Cycling/" style="font-size: 10px;">Cycling</a><a href="/tags/Encoding/" style="font-size: 10px;">Encoding</a><a href="/tags/Feature-Construction/" style="font-size: 10px;">Feature Construction</a><a href="/tags/Feature-Engineering/" style="font-size: 10px;">Feature Engineering</a><a href="/tags/Feature-Extraction/" style="font-size: 10px;">Feature Extraction</a><a href="/tags/HBase/" style="font-size: 20px;">HBase</a><a href="/tags/HFile/" style="font-size: 10px;">HFile</a><a href="/tags/Hive/" style="font-size: 10px;">Hive</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/OpenTSDB/" style="font-size: 13.33px;">OpenTSDB</a><a href="/tags/Phoenix/" style="font-size: 16.67px;">Phoenix</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a><a href="/tags/Time-Series-Database/" style="font-size: 10px;">Time Series Database</a><a href="/tags/Travel/" style="font-size: 10px;">Travel</a>
+      <a href="/tags/Architecture/" style="font-size: 10px;">Architecture</a><a href="/tags/Avatica/" style="font-size: 12.5px;">Avatica</a><a href="/tags/Compaction/" style="font-size: 10px;">Compaction</a><a href="/tags/Cycling/" style="font-size: 10px;">Cycling</a><a href="/tags/Encoding/" style="font-size: 10px;">Encoding</a><a href="/tags/Feature-Construction/" style="font-size: 10px;">Feature Construction</a><a href="/tags/Feature-Engineering/" style="font-size: 10px;">Feature Engineering</a><a href="/tags/Feature-Extraction/" style="font-size: 10px;">Feature Extraction</a><a href="/tags/HBase/" style="font-size: 20px;">HBase</a><a href="/tags/HFile/" style="font-size: 10px;">HFile</a><a href="/tags/Hive/" style="font-size: 10px;">Hive</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/OpenTSDB/" style="font-size: 15px;">OpenTSDB</a><a href="/tags/Phoenix/" style="font-size: 17.5px;">Phoenix</a><a href="/tags/Read/" style="font-size: 10px;">Read</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a><a href="/tags/Time-Series-Database/" style="font-size: 10px;">Time Series Database</a><a href="/tags/Travel/" style="font-size: 10px;">Travel</a>
     </div>
   </div>
 
@@ -194,7 +194,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/09/">九月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">七月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/06/">六月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/03/">三月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/02/">二月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/01/">一月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2012/12/">十二月 2012</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/09/">九月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">八月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">七月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/06/">六月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/03/">三月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/02/">二月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/01/">一月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2012/12/">十二月 2012</a><span class="archive-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -210,7 +210,11 @@
           </li>
         
           <li>
-            <a href="/2015/09/11/OpenTSDB-Digest-HBase-Write-and-Row-Compaction/">OpenTSDB Digest：HBase 数据的写入和压缩</a>
+            <a href="/2015/09/01/OpenTSDB-Digest-HBase-Read/">OpenTSDB Digest：HBase 数据的读取</a>
+          </li>
+        
+          <li>
+            <a href="/2015/08/01/OpenTSDB-Digest-HBase-Write-and-Row-Compaction/">OpenTSDB Digest：HBase 数据的写入和压缩</a>
           </li>
         
           <li>
@@ -218,11 +222,7 @@
           </li>
         
           <li>
-            <a href="/2015/06/27/OpenTSDB-Digest-time-series-data-table-design-on-hbase/">OpenTSDB Digest: HBase 中时间序列数据表的设计</a>
-          </li>
-        
-          <li>
-            <a href="/2015/06/07/Feature-Engineering-using-Apache-Hive-HBase-and-Phoenix/">从ODS到FEATURE：Apache Hive、HBase、Phoenix三剑客之离线特征工程实战</a>
+            <a href="/2015/07/01/OpenTSDB-Digest-time-series-data-table-design-on-hbase/">OpenTSDB Digest: HBase 中时间序列数据表的设计</a>
           </li>
         
       </ul>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>OpenTSDB Digest：HBase 数据的读取 | 涛声依旧</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="description" content="了解了 OpenTSDB HBase 数据表的设计和数据写入的过程，数据读取的过程就比较简单了，还是上代码。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OpenTSDB Digest：HBase 数据的读取">
+<meta property="og:url" content="https://dingguitao.github.io/2015/09/01/OpenTSDB-Digest-HBase-Read/index.html">
+<meta property="og:site_name" content="涛声依旧">
+<meta property="og:description" content="了解了 OpenTSDB HBase 数据表的设计和数据写入的过程，数据读取的过程就比较简单了，还是上代码。">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="OpenTSDB Digest：HBase 数据的读取">
+<meta name="twitter:description" content="了解了 OpenTSDB HBase 数据表的设计和数据写入的过程，数据读取的过程就比较简单了，还是上代码。">
+  
+    <link rel="alternative" href="/atom.xml" title="涛声依旧" type="application/atom+xml">
+  
+  
+    <link rel="icon" href="/favicon.png">
+  
+  <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="/css/style.css" type="text/css">
+  
+
+</head>
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">涛声依旧</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="q" value="site:https://dingguitao.github.io"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-OpenTSDB-Digest-HBase-Read" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2015/09/01/OpenTSDB-Digest-HBase-Read/" class="article-date">
+  <time datetime="2015-09-01T03:54:24.000Z" itemprop="datePublished">2015-09-01</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      OpenTSDB Digest：HBase 数据的读取
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>了解了 OpenTSDB HBase 数据表的设计和数据写入的过程，数据读取的过程就比较简单了，还是上代码。</p>
+<a id="more"></a>
+<h2 id="1-_tsdb-uid_表的查询">1. tsdb-uid 表的查询</h2><p>OpenTSDB 自身提供了一个数据查询的 UI，在输入 metric / tagk / tagv 的前缀的时候，会有数据库中已存数据的提示，这个过程中 OpenTSDB 实际上对 HBase 中的 tsdb-uid 表进行了查询，过程就是一次设定 start end row key 的扫描。</p>
+<p><code>class: net.opentsdb.core.TsdbQuery</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">static</span> Scanner <span class="title">getSuggestScanner</span><span class="params">(<span class="keyword">final</span> HBaseClient client,</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">byte</span>[] tsd_uid_table, <span class="keyword">final</span> String search,</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">byte</span>[] kind_or_null, <span class="keyword">final</span> <span class="keyword">int</span> max_results)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">byte</span>[] start_row;</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">byte</span>[] end_row;</span><br><span class="line">  <span class="keyword">if</span> (search.isEmpty()) &#123;</span><br><span class="line">    start_row = START_ROW;</span><br><span class="line">    end_row = END_ROW;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    start_row = toBytes(search);</span><br><span class="line">    end_row = Arrays.copyOf(start_row, start_row.length);</span><br><span class="line">    end_row[start_row.length - <span class="number">1</span>]++;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">final</span> Scanner scanner = client.newScanner(tsd_uid_table);</span><br><span class="line">  scanner.setStartKey(start_row);</span><br><span class="line">  scanner.setStopKey(end_row);</span><br><span class="line">  scanner.setFamily(ID_FAMILY);</span><br><span class="line">  <span class="keyword">if</span> (kind_or_null != <span class="keyword">null</span>) &#123;</span><br><span class="line">    scanner.setQualifier(kind_or_null);</span><br><span class="line">  &#125;</span><br><span class="line">  scanner.setMaxNumRows(max_results &lt;= <span class="number">4096</span> ? max_results : <span class="number">4096</span>);</span><br><span class="line">  <span class="keyword">return</span> scanner;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="2-_tsdb_表的查询">2. tsdb 表的查询</h2><h3 id="2-1_设定_scan_的_start_&amp;_end_key">2.1 设定 scan 的 start &amp; end key</h3><p>OpenTSDB 的主要查询是对 tsdb 表的查询，首先拿到查询条件中的 metric 和 timestamp 信息，OpenTSDB 会先设定好 scan 的 start &amp; end key。</p>
+<p>为了保证 downsample 等操作的正常进行，OpenTSDB 会根据给定的 timestamp 向前向后各多取一行（一个小时）的数据，详见 <code>getScanStartTimeSeconds()</code> 和 <code>getScanEndTimeSeconds()</code> 两个方法。</p>
+<p><code>class: net.opentsdb.core.TsdbQuery</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> Scanner <span class="title">getScanner</span><span class="params">()</span> <span class="keyword">throws</span> HBaseException </span>&#123;</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">short</span> metric_width = tsdb.metrics.width();</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">byte</span>[] start_row = <span class="keyword">new</span> <span class="keyword">byte</span>[metric_width + Const.TIMESTAMP_BYTES];</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">byte</span>[] end_row = <span class="keyword">new</span> <span class="keyword">byte</span>[metric_width + Const.TIMESTAMP_BYTES];</span><br><span class="line">  Bytes.setInt(start_row, (<span class="keyword">int</span>) getScanStartTimeSeconds(), metric_width);</span><br><span class="line">  Bytes.setInt(end_row, (end_time == UNSET</span><br><span class="line">                         ? -<span class="number">1</span>  <span class="comment">// Will scan until the end (0xFFF...).</span></span><br><span class="line">                         : (<span class="keyword">int</span>) getScanEndTimeSeconds()),</span><br><span class="line">               metric_width);</span><br><span class="line">  </span><br><span class="line">  <span class="comment">// set the metric UID based on the TSUIDs if given, or the metric UID</span></span><br><span class="line">  <span class="keyword">if</span> (tsuids != <span class="keyword">null</span> &amp;&amp; !tsuids.isEmpty()) &#123;</span><br><span class="line">    <span class="keyword">final</span> String tsuid = tsuids.get(<span class="number">0</span>);</span><br><span class="line">    <span class="keyword">final</span> String metric_uid = tsuid.substring(<span class="number">0</span>, TSDB.metrics_width() * <span class="number">2</span>);</span><br><span class="line">    metric = UniqueId.stringToUid(metric_uid);</span><br><span class="line">    System.arraycopy(metric, <span class="number">0</span>, start_row, <span class="number">0</span>, metric_width);</span><br><span class="line">    System.arraycopy(metric, <span class="number">0</span>, end_row, <span class="number">0</span>, metric_width); </span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    System.arraycopy(metric, <span class="number">0</span>, start_row, <span class="number">0</span>, metric_width);</span><br><span class="line">    System.arraycopy(metric, <span class="number">0</span>, end_row, <span class="number">0</span>, metric_width);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> Scanner scanner = tsdb.client.newScanner(tsdb.table);</span><br><span class="line">  scanner.setStartKey(start_row);</span><br><span class="line">  scanner.setStopKey(end_row);</span><br><span class="line">  <span class="keyword">if</span> (tsuids != <span class="keyword">null</span> &amp;&amp; !tsuids.isEmpty()) &#123;</span><br><span class="line">    createAndSetTSUIDFilter(scanner);</span><br><span class="line">  &#125; <span class="function"><span class="keyword">else</span> <span class="title">if</span> <span class="params">(tags.size()</span> &gt; 0 || group_bys !</span>= <span class="keyword">null</span>) &#123;</span><br><span class="line">    createAndSetFilter(scanner);</span><br><span class="line">  &#125;</span><br><span class="line">  scanner.setFamily(TSDB.FAMILY);</span><br><span class="line">  <span class="keyword">return</span> scanner;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="2-2_设定_scan_的正则过滤">2.2 设定 scan 的正则过滤</h3><p>除了 metric 和 timestamp 这两个条件，tag 的过滤是通过正则过滤来实现的。假设我们的查询条件中有两个 tag：{ 0 0 1 0 0 2 } 和 { 4 5 6 9 8 7 }，最后生成的正则应该是：<code>^.{7}(?:.{6})*\\Q\000\000\001\000\000\002\\E(?:.{6})*\\Q\004\005\006\011\010\007\\E(?:.{6})*$</code>。</p>
+<p><code>class: net.opentsdb.core.TsdbQuery</code></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">createAndSetFilter</span><span class="params">(<span class="keyword">final</span> Scanner scanner)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (group_bys != <span class="keyword">null</span>) &#123;</span><br><span class="line">    Collections.sort(group_bys, Bytes.MEMCMP);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">short</span> name_width = tsdb.tag_names.width();</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">short</span> value_width = tsdb.tag_values.width();</span><br><span class="line">  <span class="keyword">final</span> <span class="keyword">short</span> tagsize = (<span class="keyword">short</span>) (name_width + value_width);</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">final</span> StringBuilder buf = <span class="keyword">new</span> StringBuilder(</span><br><span class="line">      <span class="number">15</span>  <span class="comment">// "^.&#123;N&#125;" + "(?:.&#123;M&#125;)*" + "$"</span></span><br><span class="line">      + ((<span class="number">13</span> + tagsize) <span class="comment">// "(?:.&#123;M&#125;)*\\Q" + tagsize bytes + "\\E"</span></span><br><span class="line">         * (tags.size() + (group_bys == <span class="keyword">null</span> ? <span class="number">0</span> : group_bys.size() * <span class="number">3</span>))));</span><br><span class="line">  <span class="comment">// In order to avoid re-allocations, reserve a bit more w/ groups ^^^</span></span><br><span class="line"></span><br><span class="line">  <span class="comment">// Alright, let's build this regexp.  From the beginning...</span></span><br><span class="line">  buf.append(<span class="string">"(?s)"</span>  <span class="comment">// Ensure we use the DOTALL flag.</span></span><br><span class="line">             + <span class="string">"^.&#123;"</span>)</span><br><span class="line">     <span class="comment">// ... start by skipping the metric ID and timestamp.</span></span><br><span class="line">     .append(tsdb.metrics.width() + Const.TIMESTAMP_BYTES)</span><br><span class="line">     .append(<span class="string">"&#125;"</span>);</span><br><span class="line">  <span class="keyword">final</span> Iterator&lt;<span class="keyword">byte</span>[]&gt; tags = <span class="keyword">this</span>.tags.iterator();</span><br><span class="line">  <span class="keyword">final</span> Iterator&lt;<span class="keyword">byte</span>[]&gt; group_bys = (<span class="keyword">this</span>.group_bys == <span class="keyword">null</span></span><br><span class="line">                                      ? <span class="keyword">new</span> ArrayList&lt;<span class="keyword">byte</span>[]&gt;(<span class="number">0</span>).iterator()</span><br><span class="line">                                      : <span class="keyword">this</span>.group_bys.iterator());</span><br><span class="line">  <span class="keyword">byte</span>[] tag = tags.hasNext() ? tags.next() : <span class="keyword">null</span>;</span><br><span class="line">  <span class="keyword">byte</span>[] group_by = group_bys.hasNext() ? group_bys.next() : <span class="keyword">null</span>;</span><br><span class="line">  <span class="comment">// Tags and group_bys are already sorted.  We need to put them in the</span></span><br><span class="line">  <span class="comment">// regexp in order by ID, which means we just merge two sorted lists.</span></span><br><span class="line">  do &#123;</span><br><span class="line">    <span class="comment">// Skip any number of tags.</span></span><br><span class="line">    buf.append(<span class="string">"(?:.&#123;"</span>).append(tagsize).append(<span class="string">"&#125;)*\\Q"</span>);</span><br><span class="line">    <span class="keyword">if</span> (isTagNext(name_width, tag, group_by)) &#123;</span><br><span class="line">      addId(buf, tag);</span><br><span class="line">      tag = tags.hasNext() ? tags.next() : <span class="keyword">null</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;  <span class="comment">// Add a group_by.</span></span><br><span class="line">      addId(buf, group_by);</span><br><span class="line">      <span class="keyword">final</span> <span class="keyword">byte</span>[][] value_ids = (group_by_values == <span class="keyword">null</span></span><br><span class="line">                                  ? <span class="keyword">null</span></span><br><span class="line">                                  : group_by_values.get(group_by));</span><br><span class="line">      <span class="keyword">if</span> (value_ids == <span class="keyword">null</span>) &#123;  <span class="comment">// We don't want any specific ID...</span></span><br><span class="line">        buf.append(<span class="string">".&#123;"</span>).append(value_width).append(<span class="string">'&#125;'</span>);  <span class="comment">// Any value ID.</span></span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;  <span class="comment">// We want specific IDs.  List them: /(AAA|BBB|CCC|..)/</span></span><br><span class="line">        buf.append(<span class="string">"(?:"</span>);</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">final</span> <span class="keyword">byte</span>[] value_id : value_ids) &#123;</span><br><span class="line">          buf.append(<span class="string">"\\Q"</span>);</span><br><span class="line">          addId(buf, value_id);</span><br><span class="line">          buf.append(<span class="string">'|'</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// Replace the pipe of the last iteration.</span></span><br><span class="line">        buf.setCharAt(buf.length() - <span class="number">1</span>, <span class="string">')'</span>);</span><br><span class="line">      &#125;</span><br><span class="line">      group_by = group_bys.hasNext() ? group_bys.next() : <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">while</span> (tag != group_by);  <span class="comment">// Stop when they both become null.</span></span><br><span class="line">  <span class="comment">// Skip any number of tags before the end.</span></span><br><span class="line">  buf.append(<span class="string">"(?:.&#123;"</span>).append(tagsize).append(<span class="string">"&#125;)*$"</span>);</span><br><span class="line">  scanner.setKeyRegexp(buf.toString(), CHARSET);</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://dingguitao.github.io/2015/09/01/OpenTSDB-Digest-HBase-Read/" data-id="cigdauxfk001dfpowta25lbew" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Read/">Read</a></li></ul>
+
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2015/09/22/An-In-Depth-Look-at-the-HBase-Architecture/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          [译] HBase 架构总览
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2015/08/01/OpenTSDB-Digest-HBase-Write-and-Row-Compaction/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">OpenTSDB Digest：HBase 数据的写入和压缩</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Categories</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">8</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kiong/">Kiong</a><span class="category-list-count">5</span></li></ul>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Architecture/">Architecture</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Compaction/">Compaction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Cycling/">Cycling</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Encoding/">Encoding</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">6</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HFile/">HFile</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Hive/">Hive</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Read/">Read</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Travel/">Travel</a><span class="tag-list-count">1</span></li></ul>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/Architecture/" style="font-size: 10px;">Architecture</a><a href="/tags/Avatica/" style="font-size: 12.5px;">Avatica</a><a href="/tags/Compaction/" style="font-size: 10px;">Compaction</a><a href="/tags/Cycling/" style="font-size: 10px;">Cycling</a><a href="/tags/Encoding/" style="font-size: 10px;">Encoding</a><a href="/tags/Feature-Construction/" style="font-size: 10px;">Feature Construction</a><a href="/tags/Feature-Engineering/" style="font-size: 10px;">Feature Engineering</a><a href="/tags/Feature-Extraction/" style="font-size: 10px;">Feature Extraction</a><a href="/tags/HBase/" style="font-size: 20px;">HBase</a><a href="/tags/HFile/" style="font-size: 10px;">HFile</a><a href="/tags/Hive/" style="font-size: 10px;">Hive</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/OpenTSDB/" style="font-size: 15px;">OpenTSDB</a><a href="/tags/Phoenix/" style="font-size: 17.5px;">Phoenix</a><a href="/tags/Read/" style="font-size: 10px;">Read</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a><a href="/tags/Time-Series-Database/" style="font-size: 10px;">Time Series Database</a><a href="/tags/Travel/" style="font-size: 10px;">Travel</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/09/">九月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">八月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">七月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/06/">六月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/03/">三月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/02/">二月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/01/">一月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2012/12/">十二月 2012</a><span class="archive-list-count">1</span></li></ul>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recents</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2015/09/22/An-In-Depth-Look-at-the-HBase-Architecture/">[译] HBase 架构总览</a>
+          </li>
+        
+          <li>
+            <a href="/2015/09/01/OpenTSDB-Digest-HBase-Read/">OpenTSDB Digest：HBase 数据的读取</a>
+          </li>
+        
+          <li>
+            <a href="/2015/08/01/OpenTSDB-Digest-HBase-Write-and-Row-Compaction/">OpenTSDB Digest：HBase 数据的写入和压缩</a>
+          </li>
+        
+          <li>
+            <a href="/2015/07/21/qhh/">青海湖婚纱照＋环湖骑行</a>
+          </li>
+        
+          <li>
+            <a href="/2015/07/01/OpenTSDB-Digest-time-series-data-table-design-on-hbase/">OpenTSDB Digest: HBase 中时间序列数据表的设计</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2015 Ding Guitao<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+
+
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css" type="text/css">
+  <script src="/fancybox/jquery.fancybox.pack.js" type="text/javascript"></script>
+
+
+<script src="/js/script.js" type="text/javascript"></script>
+
+  </div>
+</body>
+</html>
