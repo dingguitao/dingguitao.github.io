@@ -94,16 +94,16 @@
 <li>位置定位：APP 会首先采集我们所在的地理位置数据，即经纬度等信息。</li>
 <li>数据查询：采集完成之后服务器会进行一次数据查询，在所有的有地理位置记录的餐馆中筛选得到离我们最近的 N 个餐馆。</li>
 </ul>
-<p>这是一个典型的<strong>附近的 N 个 XX</strong> 的问题，位置定位和查询中的主要数据便是 GIS（Geographic Information System）数据，可以简单地理解为经度、纬度、海拔等数据等数据的综合。而且随着智能设备的普及，这类的数据采集越来越方便，量也越来越大，能有效地解决这类问题还是比较有意义的。</p>
+<p>这是一个典型的<strong>附近的 N 个 XX</strong> 的问题，位置定位和查询中的主要数据便是 GIS（Geographic Information System）数据，可以简单地理解为经度、纬度、海拔等数据的综合。而且随着智能设备的普及，这类的数据采集越来越方便，量也越来越大，能有效地解决这类问题还是比较有意义的。</p>
 <h2 id="2-_HBase_数据表的设计">2. HBase 数据表的设计</h2><p>说到 HBase 的表设计，最多的就是 row key 的设计，合适的 row key 设计能够让我们用最少的扫描获取到所有感兴趣的数据。为了达到这个目的，需要满足两个要求</p>
 <ul>
 <li>地址位置接近的数据点，在磁盘上存储的位置也应该尽可能接近。</li>
-<li>一次查询，扫描的点越少越好。</li>
+<li>一次查询，扫描的范围越小越好。</li>
 </ul>
-<h3 id="2-1_最简单粗暴的方案">2.1 最简单粗暴的方案</h3><p>拿到这样一个需求之后，一个非常粗暴的方案就是将 row key 设计成经度和纬度的简单拼接，这样经度接近的数据点在磁盘中就存放地越近，查询</p>
+<h3 id="2-1_简单粗暴的方案">2.1 简单粗暴的方案</h3><p>拿到这样一个需求之后，一个非常粗暴的方案就是将 row key 设计成经度和纬度的简单拼接，这样经度接近的数据点在磁盘中就存放得越近。</p>
 <p>但是稍微思考一下就知道这种方案的弊端，如果两个数据点的经度接近，纬度差很多的话，其实也会被存放在相邻的位置，这样我们进行数据查询的时候，就会多出来很多无用的点（离我们目标点的距离太远）。</p>
-<h3 id="2-2_降维：geohash">2.2 降维：geohash</h3><p>简单的拼接不能很好地解决问题，归根到底主要是因为 GIS 数据有至少两个维度：经度和纬度，两个维度之间是独立的，也没有优先级的关系，而 row key 是一维的，所以如果要在 row key 中包含经纬度的信息，必须对数据进行降维处理，而 geohash 算法正好能满足这个需求。</p>
-<p>下图是 geohash 算法的简介，简单讲 geohash 就是对地球表面进行切块，例如：纬度的范围是 [-90, 90]，第一刀切成 [-90, 0] 和 [0, 90] 两块，如果输入点落在了上半区，第一位记为 1，依此类推，经度也是用同样的方法。</p>
+<h3 id="2-2_降维：geohash">2.2 降维：geohash</h3><p>简单的拼接不能很好地解决问题，归根到底主要是因为 GIS 数据有两个维度：经度和纬度。两个维度之间是独立的，也没有优先级的关系，而 row key 是一维的，所以如果要在 row key 中包含经纬度的信息，必须对数据进行降维处理，而 geohash 算法正好能满足这个需求。</p>
+<p>下图是 geohash 算法的简介，简单讲 geohash 就是对地球表面进行切块，例如：纬度的范围是 [-90, 90]，第一刀切成 [-90, 0] 和 [0, 90] 两块，如果输入点落在了上半区，第一位记为 1，反之记为 0，依此类推，经度也是用同样的方法。</p>
 <p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/geohash.png" alt=""></p>
 <p>这样根据最初输入的经纬度，在一定的精度条件（切的刀数）下，就能计算出每个点的 geohash 值，这个值可以作为 HBase 数据表的 row key，因为 geohash 值前缀相同的位数越多，两个点在地理位置上越接近。</p>
 <p>这样我们在进行数据查询的时候，步骤应该是这样的：</p>
@@ -115,9 +115,9 @@
 <h2 id="3-_geohash_的问题">3. geohash 的问题</h2><h3 id="3-1_邻近两点的_geohash_值可能相差很多">3.1 邻近两点的 geohash 值可能相差很多</h3><p>在这个问题上，geohash 并不是万能的。因为从本质上看，geohash 是把地球切成了一个个的小块，每一个小块内的点拥有相同的 geohash 值，但是相邻小块的 geohash 值<strong>有可能</strong>差得比较多。举个极端点的例子：现在有两个点，分别是（90.000000, 0.000001）和（90.000000, -0.000001），这两点从经纬度上看位置十分接近，但是两点的 geohash 值分别是 <code>upbpbpbpbpbx</code> 和 <code>gzzzzzzzzzzr</code>。</p>
 <p>解决办法是将感兴趣小块周围的八个小块一起纳入扫描的范围，如下图所示，这样能比较有效地避免 geohash 的边界问题。</p>
 <p><img src="http://7xjkvk.com1.z0.glb.clouddn.com/geohash%20neighbors.png" alt=""></p>
-<h3 id="3-2_扫描的精度该设置多少">3.2 扫描的精度该设置多少</h3><p>在前面所述的条件下，我们数据查询的时候实际上是对 HBase 的一张表进行 row key prefix filter，但是此 filter 使用的前缀的位数如何确定？位数越大，精度越高，但可能得到的数据点会过少；反之精度降低，导致得到的数据点过多，造成了过多的 IO 等资源的消耗。</p>
+<h3 id="3-2_扫描的精度该设置多少">3.2 扫描的精度该设置多少</h3><p>在前面所述的条件下，我们数据查询的时候实际上是对 HBase 的一张表进行 row key prefix filter，但是此 filter 使用的前缀的位数如何确定？位数越大，精度越高，但可能得到的数据点会过少；反之精度降低，导致得到的数据点过多，造成了过多的 IO 和资源消耗。</p>
 <p>实际上这个值要根据实际的数据进行测试决定，可以通过实验先取一个经验值，或者根据用户的其它输入条件确定（比如距离在多少公里之内）。</p>
-<h2 id="4-_写在最后">4. 写在最后</h2><p>其实书中此章还介绍了另外一种 GIS 数据的查询场景：查询落在某个多边形范围内的数据点，不过换汤不换药，表的设计是不变的，查询思路也类似。从这样的案例中可以看到，在 HBase 数据表的设计中：</p>
+<h2 id="4-_写在最后">4. 写在最后</h2><p>书中此章还介绍了另外一种 GIS 数据的查询场景：查询落在某个多边形范围内的数据点，不过换汤不换药，表的设计是不变的，查询思路也类似。从这样的案例中可以看到，在 HBase 数据表的设计中：</p>
 <ul>
 <li>尽量把查询需要的纬度数据放在 row key 中，row key 即索引呀。</li>
 <li>不要期待单纯的 row key 的设计能够解决所有问题，很多时候跟其它已有的方法结合才能发挥出 HBase 最强大的功力。</li>
@@ -127,7 +127,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/10/30/Nearest-N-Problem-HBase-Table-Design-for-GIS-Data/" data-id="cihm2fdzm001hbys69ntkzyvt" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/10/30/Nearest-N-Problem-HBase-Table-Design-for-GIS-Data/" data-id="cihm2muz8001hids64xxzwy22" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/GIS/">GIS</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Nearest-N-Problem/">Nearest N Problem</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/geohash/">geohash</a></li></ul>
