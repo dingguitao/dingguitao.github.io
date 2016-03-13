@@ -96,7 +96,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="cii31eufv000gf2s6kcv50jo0" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/26/fix_phoenix_server_error_413/" data-id="cilqa4aej000gsbow4inhd4sq" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Avatica/">Avatica</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Jetty/">Jetty</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li></ul>
@@ -144,10 +144,106 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2015/05/15/apache_phoenix_query_hbase_using_sql/" data-id="cii31eug2000uf2s6rm9mtlhm" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2015/05/15/apache_phoenix_query_hbase_using_sql/" data-id="cilqa4aeq000usbowxp6c450t" class="article-share-link">Share</a>
       
       
   <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/HBase/">HBase</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Phoenix/">Phoenix</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-SQL-Server-User-Query-and-Login-Time-Restriction" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2014/02/25/SQL-Server-User-Query-and-Login-Time-Restriction/" class="article-date">
+  <time datetime="2014-02-25T07:41:07.000Z" itemprop="datePublished">2014-02-25</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2014/02/25/SQL-Server-User-Query-and-Login-Time-Restriction/">为了忘却的纪念（二）：SQL Server 限制特定时间段内用户的查询和登录</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>有一天早上醒来，发现大部分的任务都在等待依赖阶段，比往常晚了五六个小时。查原因发现原来是 BA 某同学的凌晨提交的一个查询过大，将非常重要的一张表锁住了，导致新一天的数据无法插入进来。因为凌晨 0-6 点这段时间基本上是系统任务的运行时间段，所以为了解决这个问题，当时决定这段时间暂停向特定用户提供数据查询服务，以保证系统数据流的正常运行。</p>
+        
+          <p class="article-more-link">
+            <a href="/2014/02/25/SQL-Server-User-Query-and-Login-Time-Restriction/#more">Read More</a>
+          </p>
+        
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://dingguitao.github.io/2014/02/25/SQL-Server-User-Query-and-Login-Time-Restriction/" data-id="cilqa4aes0010sbow3v9yosdd" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SQL-Server/">SQL Server</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+  
+    <article id="post-SQL-Server-Job-Failure-Email-Alert-and-Automatic-Retry" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2014/01/25/SQL-Server-Job-Failure-Email-Alert-and-Automatic-Retry/" class="article-date">
+  <time datetime="2014-01-25T06:39:43.000Z" itemprop="datePublished">2014-01-25</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2014/01/25/SQL-Server-Job-Failure-Email-Alert-and-Automatic-Retry/">为了忘却的纪念（一）：SQL Server 任务失败邮件报警和自动重试</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>想当年刚进公司的时候做的是数据仓库实习生，其中主要的职责之一便是维护日常运行的 ETL 任务，当时公司的数仓还是用的 SQL Server ＋ Hive (Hadoop) 的混合平台，其中 SQL Server 中跑了大量的数据消费层的任务，所以写了一些小的运维脚本工具。</p>
+<p>之所以题目中使用了为了忘却的纪念，是因为最后大家终于忍不了微软套件的封闭，于是下决心把数据部门中所有的 Windows 服务器都干掉，全面拥抱开源。SQL Server 见证了我职业生涯最初期的表现，所以我有必要写两篇文章纪念一下。</p>
+<p>Update @ 2016-05-13：微软先收购了 Revolution，又推出了 SQL Server on Linux，然后又在 VS 中集成了基于 R 语言的工具，不管是出于什么原因，大巨头越来越开放也是一件值得高兴的事呢。</p>
+        
+          <p class="article-more-link">
+            <a href="/2014/01/25/SQL-Server-Job-Failure-Email-Alert-and-Automatic-Retry/#more">Read More</a>
+          </p>
+        
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://dingguitao.github.io/2014/01/25/SQL-Server-Job-Failure-Email-Alert-and-Automatic-Retry/" data-id="cilqa4aev0014sbow9pwpp8bf" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Automatic-Retry/">Automatic Retry</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Job-Failure-Email-Alert/">Job Failure Email Alert</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SQL-Server/">SQL Server</a></li></ul>
 
     </footer>
   </div>
@@ -188,7 +284,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2013/02/25/Kiong-Role-at-Lab/" data-id="cii31eugn0021f2s6lydx7pkk" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2013/02/25/Kiong-Role-at-Lab/" data-id="cilqa4aff002csbowmbveedqe" class="article-share-link">Share</a>
       
       
     </footer>
@@ -235,7 +331,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2013/01/25/Kiong-Sing/" data-id="cii31eugm001zf2s6yfv9je4l" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2013/01/25/Kiong-Sing/" data-id="cilqa4afe002asbow65xpzwgc" class="article-share-link">Share</a>
       
       
     </footer>
@@ -279,7 +375,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://dingguitao.github.io/2012/12/25/Kiong-About/" data-id="cii31eugq0023f2s6ckw8ckcb" class="article-share-link">Share</a>
+      <a data-url="https://dingguitao.github.io/2012/12/25/Kiong-About/" data-id="cilqa4afi002esbowm7mkfka1" class="article-share-link">Share</a>
       
       
     </footer>
@@ -302,7 +398,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">9</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kiong/">Kiong</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Psychology/">Psychology</a><span class="category-list-count">1</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Data-Technology/">Data Technology</a><span class="category-list-count">11</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Kiong/">Kiong</a><span class="category-list-count">5</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/Psychology/">Psychology</a><span class="category-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -311,7 +407,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Architecture/">Architecture</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Compaction/">Compaction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Cycling/">Cycling</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Encoding/">Encoding</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GIS/">GIS</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Gift/">Gift</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HFile/">HFile</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Hive/">Hive</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Nearest-N-Problem/">Nearest N Problem</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Psychology/">Psychology</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Read-Digest/">Read Digest</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Science/">Science</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Travel/">Travel</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/geohash/">geohash</a><span class="tag-list-count">1</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Architecture/">Architecture</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Automatic-Retry/">Automatic Retry</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Avatica/">Avatica</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Compaction/">Compaction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Cycling/">Cycling</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Encoding/">Encoding</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Construction/">Feature Construction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Engineering/">Feature Engineering</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Feature-Extraction/">Feature Extraction</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GIS/">GIS</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Gift/">Gift</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HBase/">HBase</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/HFile/">HFile</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Hive/">Hive</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Jetty/">Jetty</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Job-Failure-Email-Alert/">Job Failure Email Alert</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Nearest-N-Problem/">Nearest N Problem</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OpenTSDB/">OpenTSDB</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Phoenix/">Phoenix</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Psychology/">Psychology</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Read-Digest/">Read Digest</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-Server/">SQL Server</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SQL-on-HBase/">SQL on HBase</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Science/">Science</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Time-Series-Database/">Time Series Database</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Travel/">Travel</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/geohash/">geohash</a><span class="tag-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -320,7 +416,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tag Cloud</h3>
     <div class="widget tagcloud">
-      <a href="/tags/Architecture/" style="font-size: 10px;">Architecture</a><a href="/tags/Avatica/" style="font-size: 12.5px;">Avatica</a><a href="/tags/Compaction/" style="font-size: 10px;">Compaction</a><a href="/tags/Cycling/" style="font-size: 10px;">Cycling</a><a href="/tags/Encoding/" style="font-size: 10px;">Encoding</a><a href="/tags/Feature-Construction/" style="font-size: 10px;">Feature Construction</a><a href="/tags/Feature-Engineering/" style="font-size: 10px;">Feature Engineering</a><a href="/tags/Feature-Extraction/" style="font-size: 10px;">Feature Extraction</a><a href="/tags/GIS/" style="font-size: 10px;">GIS</a><a href="/tags/Gift/" style="font-size: 10px;">Gift</a><a href="/tags/HBase/" style="font-size: 20px;">HBase</a><a href="/tags/HFile/" style="font-size: 10px;">HFile</a><a href="/tags/Hive/" style="font-size: 10px;">Hive</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/Nearest-N-Problem/" style="font-size: 10px;">Nearest N Problem</a><a href="/tags/OpenTSDB/" style="font-size: 15px;">OpenTSDB</a><a href="/tags/Phoenix/" style="font-size: 17.5px;">Phoenix</a><a href="/tags/Psychology/" style="font-size: 10px;">Psychology</a><a href="/tags/Read-Digest/" style="font-size: 10px;">Read Digest</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a><a href="/tags/Science/" style="font-size: 10px;">Science</a><a href="/tags/Time-Series-Database/" style="font-size: 10px;">Time Series Database</a><a href="/tags/Travel/" style="font-size: 10px;">Travel</a><a href="/tags/geohash/" style="font-size: 10px;">geohash</a>
+      <a href="/tags/Architecture/" style="font-size: 10px;">Architecture</a><a href="/tags/Automatic-Retry/" style="font-size: 10px;">Automatic Retry</a><a href="/tags/Avatica/" style="font-size: 12.5px;">Avatica</a><a href="/tags/Compaction/" style="font-size: 10px;">Compaction</a><a href="/tags/Cycling/" style="font-size: 10px;">Cycling</a><a href="/tags/Encoding/" style="font-size: 10px;">Encoding</a><a href="/tags/Feature-Construction/" style="font-size: 10px;">Feature Construction</a><a href="/tags/Feature-Engineering/" style="font-size: 10px;">Feature Engineering</a><a href="/tags/Feature-Extraction/" style="font-size: 10px;">Feature Extraction</a><a href="/tags/GIS/" style="font-size: 10px;">GIS</a><a href="/tags/Gift/" style="font-size: 10px;">Gift</a><a href="/tags/HBase/" style="font-size: 20px;">HBase</a><a href="/tags/HFile/" style="font-size: 10px;">HFile</a><a href="/tags/Hive/" style="font-size: 10px;">Hive</a><a href="/tags/Jetty/" style="font-size: 10px;">Jetty</a><a href="/tags/Job-Failure-Email-Alert/" style="font-size: 10px;">Job Failure Email Alert</a><a href="/tags/Nearest-N-Problem/" style="font-size: 10px;">Nearest N Problem</a><a href="/tags/OpenTSDB/" style="font-size: 15px;">OpenTSDB</a><a href="/tags/Phoenix/" style="font-size: 17.5px;">Phoenix</a><a href="/tags/Psychology/" style="font-size: 10px;">Psychology</a><a href="/tags/Read-Digest/" style="font-size: 10px;">Read Digest</a><a href="/tags/SQL-Server/" style="font-size: 12.5px;">SQL Server</a><a href="/tags/SQL-on-HBase/" style="font-size: 10px;">SQL on HBase</a><a href="/tags/Science/" style="font-size: 10px;">Science</a><a href="/tags/Time-Series-Database/" style="font-size: 10px;">Time Series Database</a><a href="/tags/Travel/" style="font-size: 10px;">Travel</a><a href="/tags/geohash/" style="font-size: 10px;">geohash</a>
     </div>
   </div>
 
@@ -329,7 +425,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">十一月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">十月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/09/">九月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">八月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">七月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/06/">六月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/02/">二月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/01/">一月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2012/12/">十二月 2012</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">十一月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">十月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/09/">九月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">八月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">七月 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/06/">六月 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">五月 2015</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/02/">二月 2014</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/01/">一月 2014</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/02/">二月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2013/01/">一月 2013</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2012/12/">十二月 2012</a><span class="archive-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -372,7 +468,7 @@
   
   <div class="outer">
     <div id="footer-info" class="inner">
-      &copy; 2015 Ding Guitao<br>
+      &copy; 2016 Ding Guitao<br>
       Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
     </div>
   </div>
