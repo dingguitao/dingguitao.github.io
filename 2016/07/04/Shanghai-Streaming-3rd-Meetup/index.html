@@ -3,17 +3,17 @@
 <head>
   <meta charset="utf-8">
   
-  <title>Category: Psychology | 涛声依旧</title>
+  <title>Shanghai Streaming 3rd Meetup 会后感 | 涛声依旧</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description">
-<meta property="og:type" content="website">
-<meta property="og:title" content="涛声依旧">
-<meta property="og:url" content="https://dingguitao.github.io/categories/Psychology/index.html">
+  <meta name="description" content="周末的时候去唯品会参加了第三次 Shanghai Streaming Meetup，天气不太好，但来的人看着比前两次多了不少，听了几个主题之后还是有一些收获。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Shanghai Streaming 3rd Meetup 会后感">
+<meta property="og:url" content="https://dingguitao.github.io/2016/07/04/Shanghai-Streaming-3rd-Meetup/index.html">
 <meta property="og:site_name" content="涛声依旧">
-<meta property="og:description">
+<meta property="og:description" content="周末的时候去唯品会参加了第三次 Shanghai Streaming Meetup，天气不太好，但来的人看着比前两次多了不少，听了几个主题之后还是有一些收获。">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="涛声依旧">
-<meta name="twitter:description">
+<meta name="twitter:title" content="Shanghai Streaming 3rd Meetup 会后感">
+<meta name="twitter:description" content="周末的时候去唯品会参加了第三次 Shanghai Streaming Meetup，天气不太好，但来的人看着比前两次多了不少，听了几个主题之后还是有一些收获。">
   
     <link rel="alternative" href="/atom.xml" title="涛声依旧" type="application/atom+xml">
   
@@ -59,39 +59,84 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main">
-  
-  
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2015" class="archive-year">2015</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      <a href="/2015/11/30/Read-Digest-How-to-Think-Straight-about-Psychology/" class="archive-article-date">
-  <time datetime="2015-11-30T12:03:49.000Z" itemprop="datePublished">11月 30</time>
+        <section id="main"><article id="post-Shanghai-Streaming-3rd-Meetup" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2016/07/04/Shanghai-Streaming-3rd-Meetup/" class="article-date">
+  <time datetime="2016-07-04T12:01:51.000Z" itemprop="datePublished">2016-07-04</time>
 </a>
-      
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/Data-Technology/">Data Technology</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2015/11/30/Read-Digest-How-to-Think-Straight-about-Psychology/">读：“How to Think Straight about Psychology”</a>
+    <h1 class="article-title" itemprop="name">
+      Shanghai Streaming 3rd Meetup 会后感
     </h1>
   
 
-    </header>
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>周末的时候去唯品会参加了第三次 Shanghai Streaming Meetup，天气不太好，但来的人看着比前两次多了不少，听了几个主题之后还是有一些收获。</p>
+<a id="more"></a>
+<h2 id="几个主题">几个主题</h2><h3 id="大数据流处理最新社区动态_（姜伟华）">大数据流处理最新社区动态 （姜伟华）</h3><p>作者主要介绍最近半年流处理社区的一些动态：Kafka 0.10 带来 Kafka Stream、Apache Storm 1.0 版发布、Twitter 开源 Heron、Google 开源 Beam、还未发布的 Spark 2.0 将要带来 Structured Streaming 等：</p>
+<ul>
+<li>流处理领域明显分化成了两个方向：Storm 借鉴了不少 Heron 的优点，在传统流处理方面的功能日趋完善；Spark 和 Beam 正在统一批处理和流处理。</li>
+<li>Heron 前景略惨淡，开源晚，且 Storm 已经开始在功能上赶上来了，相信大多数的公司不会轻易转移阵地。</li>
+<li>Kafka Stream 算是 Confluent 的情怀产品，继续观望吧。</li>
+</ul>
+<h3 id="Spark_Streaming_在唯品会的实践_（毛玮）">Spark Streaming 在唯品会的实践 （毛玮）</h3><p>作者是 Intel 的工程师，跟唯品会这边有比较多的合作，主要讲了 Spark Streaming 在实际应用中的一些坑，Spark Streaming 用的不多，作者讲得比较细节，所以听起来不太有感，不过有一点：Spark 本身有 <code>updateStateByKey()</code> 的方法，对于一些需要状态的流处理场景，应该更适合，这个之后要研究一下看看。</p>
+<h3 id="Redis_Cluster_在唯品会大数据业务应用（陈群）">Redis Cluster 在唯品会大数据业务应用（陈群）</h3><p>在 Streaming Meetup 上讲 Redis，应该是组织者们凑出来的主题吧，不过总是跟数据有关系。作者是唯品会的运维人员，主要讲了 Redis Cluster 在唯品会的架构和实践，唯品会在重度使用 Redis 啊，最后就一个收获：这玩意儿比 Twemproxy 好用。之前也折腾过 Codis，运维真是老大难的问题，看到一个运维人员这么认可官方的方案，顿时好感倍增。</p>
+<h3 id="Apache_Beam_介绍（张天伦）">Apache Beam 介绍（张天伦）</h3><p>作者是 Intel 的工程师，上次讲了 Gearpump，这次主要讲 Google 刚开源的 Beam，没啥收获，内容这两篇文章（<a href="https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-101" target="_blank" rel="external">1</a> <a href="https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-102" target="_blank" rel="external">2</a>）中都有。</p>
+<h2 id="一些想法">一些想法</h2><ul>
+<li><p>目前流处理的应用场景可以分成三类：</p>
+<ul>
+<li>Real Time ETL</li>
+<li>Real Time Window-based Analytics</li>
+<li>Real Time Machine Learning</li>
+</ul>
+<p>其中前两类应该能占到绝大多数，Storm 主要 focus 在 1 上，并且功能不断增强；Spark、刚开源的 Beam 还有那些个 Streaming SQL 更多地 focus 在 2 上，所以会有统一批处理和流处理一说；由于 Spark 本身的特点，在 3 上有着非常大的优势。</p>
+</li>
+<li><p>Kafka 已经成为流处理中 MQ 的首选，它的持久化存储和客户端拉数据的模型非常适合现在流处理的实时分析场景，随着流处理场景的不断发展：窗口回溯、细分 process time 和 event time，对 MQ 的挑战会越来越大，或者会有把数据库作为消息队列的应用出现：Cassandra? HBase? Kudu? 嗯，为什么不呢？</p>
+</li>
+<li>说到批处理和流处理，他们的本质区别在哪儿？之前一直模糊地认为是场景、工具、数据计算的方法，但其实流处理中的 window-based analytics，不也是批处理嘛！只不过频次更高耗时更短而已。现在想想，它们两个或许没有什么本质区别，或者说唯一的区别在于：流处理处理的是无边界的数据，即数据一直在产生；批处理处理的是有边界的数据，即在运行任务的那一刻，所要使用的数据已经是确定的了。</li>
+<li>吐槽一下：唯品会的会议室没信号（2 3 4g 全挂，是为了大家好好开会嘛），Guest Wifi 不能给 Guest 用，办公室下面就是地铁，没几分钟就况且况且况且。</li>
+<li>大悦城北楼六楼的西西弗书店不错，Mark 一记。</li>
+</ul>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://dingguitao.github.io/2016/07/04/Shanghai-Streaming-3rd-Meetup/" data-id="ciraro7rg0010eoowtcrhxo7a" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Streaming/">Streaming</a></li></ul>
+
+    </footer>
   </div>
+  
+    
+<nav id="article-nav">
+  
+  
+    <a href="/2015/11/30/Read-Digest-How-to-Think-Straight-about-Psychology/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">读：“How to Think Straight about Psychology”</div>
+    </a>
+  
+</nav>
+
+  
 </article>
-  
-  
-    </div></section>
-  
+
 </section>
         
           <aside id="sidebar">
